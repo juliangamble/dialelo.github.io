@@ -43,10 +43,13 @@ There are several things I dislike about Flux, namely:
 
 ## From Stores to Global immutable state
 
-Instead of having multiple stores, I prefer Om's approach of having a global mutable reference
-to an immutable data structure. This can be easily achieved using my [atomo](https://github.com/dialelo/atomo)
-library and Facebook's [immutable-js](https://github.com/facebook/immutable-js).
-The data structure contained in the global atom is generally a map, which gives us the ability to
+Instead of having multiple stores, I suggest Om's approach of having a global mutable reference
+to an immutable data structure. This way we model our application state as a succesion of immutable
+values, without modifying data in-place or rebinding variables to different values.
+
+This can be easily achieved using my [atomo](https://github.com/dialelo/atomo) library and Facebook's
+[immutable-js](https://github.com/facebook/immutable-js).
+The data structure contained in the global atom would be a map, which gives us the ability to
 split data into separate logical domains using keys.
 
 This approach doesn't try to hide the fact that separate logical domains tend to refer to each other,
@@ -91,10 +94,28 @@ let atomo = require("atomo");
 let state = atomo.atom(initialState);
 ```
 
+Since atoms are observable and the immutable values they refer to share structure when creating
+a new, modified value out of them, we can serialize the states our application in a memory-efficient
+way:
+
+```javascript
+let history = atomo.atom(new immutable.List());
+
+state.addWatch(function(atom, oldValue, newValue){
+    history.swap((hs) => hs.push(oldValue));
+});
+```
+
+This gives us the ability of time-travelling for free, it's trivial to implement undo/redo functionality
+on top of this state management strategy. If we were to serialize the succession of actions and their payload
+in the system we would be able to replay a user interaction with our application very easily, making regression
+testing as simple as feeding the aforementioned actions to the system and asserting that we end up with a consistent
+state.
+
 ### Cursors
 
-Views usually display a subset of the global state so we need the ability to focus on paths
-inside the global immutable state for making our views modular.
+We don't want to be passing around all the state to every view. Views usually display a subset of the global state
+so we need the ability to focus on paths inside the global immutable state for making our views modular.
 
 Om solves this problem with an abstraction called [Cursor](https://github.com/omcljs/om/wiki/Cursors), which
 lets us focus on a path of the global atom and offer the same API as atoms. This allows views to treat the substructure
@@ -158,17 +179,86 @@ let Albums = React.createClass({
 });
 ```
 
-Since cursors save a snapshot of the state they point to when created, they allow us to know
+Since cursors save a snapshot of the state they point to when created and immutable data
+equality checks are blazing fast since they are just a reference comparison, they allow us to know
 whether a component should update and implement a very efficient `shouldComponentUpdate`. You
 can see an example in my [react-kurtsore](https://github.com/dialelo/react-kurtsore) library
 and other open source libraries such as [Omniscient](https://github.com/omniscientjs/omniscient).
 
+## Getting rid of the dispatcher
+
+Flux proposes the singleton Dispatcher coupled to stores for triggering state transitions. This introduces
+dependencies between stores, making them know about each other and the order the actions must be processed
+by each store. Dispatchers are also different from a pub-sub mechanism in that they fan-out every action
+that is triggered on them to all the stores.
+
+I instead suggest using [CSP](http://en.wikipedia.org/wiki/Communicating_sequential_processes) channels for
+the actions pub-sub mechanism, which you get with the [js-csp](https://github.com/ubolonton/js-csp) library.
+
+The pub-sub system has a channel in which actions are published, and we can derive a publication from it. The
+publication takes the source channel and a function that extracts the "topic" of the messages put into the
+source channel. For ease of testing we can make the source channel configurable using an atom:
+
+```javascript
+// pubsub.js
+
+import atomo from "atomo";
+import csp from "js-csp";
+
+export const source = atomo.atom(csp.chan());
+
+export function publication(topicFn){
+    return csp.operations.pub.publication(source.deref(), topicFn);
+};
+
+export function publish(msg){
+    csp.putAsync(source.deref(), msg);
+};
+```
+
+The publication allows other components of the system to subscribe to a topic, providing a channel where the
+values that share the given topic will be put. If our actions are a immutable data structure with `type` and
+`payload` fields, we could subscribe to actions with the approach shown below:
+
+```javascript
+import csp from "js-csp";
+import pubsub from "./pubsub";
+
+let userChan = csp.chan(),
+    pub = pubsub.publication((v) => v.get("type"));
+
+pub.sub("user:log-in", userChan);
+pub.sub("user:log-out", userChan);
+
+csp.go(function*(){
+    let action = yield userChan;
+
+    while (userChan !== csp.CLOSED) {
+        let actionType = action.get("type"),
+            user = action.get("payload");
+
+        if (actionType === "user:log-in") {
+            console.log(user, " just logged in.")
+        } else  {
+            console.log(user, " just logged out.");
+        }
+
+        action = yield userChan;
+    }
+});
+```
+
+The `userChan` above is channel that will receive log-in and log-out actions published to the system;
+the generator passed to `go` will run indefinitely, listening for the actions that `userChan` receives
+and logging those events to the console. Note that the generator passed to `go` will only resume when
+`userChan` has values available, so it's safe to use a while loop inside it.
+
 ## Actions
 
 As in Flux, actions can be identified with unique and constant values. For this we can use strings
-or ES6 symbols. Since some actions may require asynchronous computations and for the sake of decoupling
-views from the actions and the dispatch machinery, we encapsulate action triggering in high-level
-APIs that the views can consume. Flux calls this high-level APIs action creators.
+or ES6 symbols. Since some actions may require asynchronous computations to get the data they need
+and for the sake of decoupling views from the actions and the dispatch machinery, we encapsulate action
+triggering in high-level APIs that the views can consume. Flux calls this high-level APIs action creators.
 
 ```javascript
 // actions.js
@@ -184,13 +274,18 @@ let addAlbum = function(album){
 };
 ```
 
-We'll see what that `pubsub` stands for below, the important thing to note here is that the action payload is
+We'll go into more detail on the `pubsub` below, the important thing to note here is that the action payload is
 immutable.
 
-## Decomplecting the dispatcher and stores
+I suggest to encapsulate every action publication in one of these functions instead of publishing
+actions from the views themselves because it decouples views from the system's communication machinery.
+We also gain the benefit of testing views in isolation since we can interact with them and make sure they
+consume our high-level APIs in the way they are supposed to.
 
-Flux proposes the singleton Dispatcher coupled to stores for triggering state transitions.
-Instead of that, we can have a generic pub-sub mechanism in place and encapsulate state transitions
+
+### Interpreting actions out of stores
+
+Having a pub-sub mechanism in place allows us to encapsulate state transitions
 into small pieces. These can listen for specific actions (or combinations of actions) on the
 pub-sub and affect the state accordingly, isolating bussines logic into modular and testable units I
 call _effects_.
