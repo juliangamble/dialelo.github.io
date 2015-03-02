@@ -4,8 +4,7 @@ Category: JavaScript
 TODO:
 
 - Better title?
-- Convert examples to ES6 module syntax
-- Show simple pubsub implementation using js-csp?
+- Use react-kurtsore in views
 - Cover testing of each abstraction?
 - Write a small application putting all this together and push it to a GitHub repo
 
