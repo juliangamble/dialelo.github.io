@@ -58,7 +58,7 @@ here is a contrived example of the shape of a music application state:
 ```javascript
 // state.js
 
-let immutable = require("immutable");
+import immutable from "immutable";
 
 let initialState = immutable.fromJS({
     albums: [
@@ -89,9 +89,11 @@ let initialState = immutable.fromJS({
 We can create the global mutable atom very easily from an immutable data structure:
 
 ```javascript
-let atomo = require("atomo");
+// state.js
 
-let state = atomo.atom(initialState);
+import atomo from "atomo";
+
+export const state = atomo.atom(initialState);
 ```
 
 Since atoms are observable and the immutable values they refer to share structure when creating
@@ -99,7 +101,12 @@ a new, modified value out of them, we can serialize the states our application i
 way:
 
 ```javascript
-let history = atomo.atom(new immutable.List());
+// history.js
+
+import immutable from "immutable";
+import {state} from "./state";
+
+const history = atomo.atom(new immutable.List());
 
 state.addWatch(function(atom, oldValue, newValue){
     history.swap((hs) => hs.push(oldValue));
@@ -125,7 +132,7 @@ implementation](https://github.com/dialelo/kurtsore) of this concept for using i
 We can derive a cursor from an atom or another cursor, allowing us to refine the path they point to:
 
 ```javascript
-let kurtsore = require("kurtsore");
+import kurtsore from "kurtsore";
 
 let cursor = kurtsore.cursor(state),
     albums = cursor.derive('albums'),
@@ -156,14 +163,14 @@ cursors to its children:
 ```javascript
 // views.js
 
-let Album = React.createClass({
+export const Album = React.createClass({
     render: function(){
         let album = this.props.album.deref();
         return <li>{album.get('artist')} - {album.get('title')}</li>;
     }
 });
 
-let Albums = React.createClass({
+export const Albums = React.createClass({
     render: function(){
         let albums = this.props.albums.deref(),
             cursors = albums.map((a, idx) => this.props.albums.derive(idx));
@@ -256,26 +263,24 @@ and logging those events to the console. Note that the generator passed to `go` 
 ## Actions
 
 As in Flux, actions can be identified with unique and constant values. For this we can use strings
-or ES6 symbols. Since some actions may require asynchronous computations to get the data they need
-and for the sake of decoupling views from the actions and the dispatch machinery, we encapsulate action
-triggering in high-level APIs that the views can consume. Flux calls this high-level APIs action creators.
+or ES6 symbols. We represent actions as an immutable record with `type` and `payload` attributes,
+where the type is the identifier constant and the payload can be an arbitrary immutable value.
 
 ```javascript
 // actions.js
 
-let pubsub = require("./pubsub"),
-    immutable = require("immutable");
+import immutable from "immutable";
 
-let ADD_ALBUM = "albums:add";
+export const Action = immutable.Record({type: null, payload: null});
 
-let addAlbum = function(album){
-    // you may do async work here!
-    pubsub.publish(ADD_ALBUM, immutable.fromJS(album));
+export function action(type, payload){
+    return new Action({type, payload});
 };
 ```
 
-We'll go into more detail on the `pubsub` below, the important thing to note here is that the action payload is
-immutable.
+Since some actions may require asynchronous computations to get the data they need and for the sake of
+decoupling views from the actions and the dispatch machinery, we encapsulate action
+triggering in high-level APIs that the views can consume. Flux calls this high-level APIs action creators.
 
 I suggest to encapsulate every action publication in one of these functions instead of publishing
 actions from the views themselves because it decouples views from the system's communication machinery.
@@ -293,10 +298,10 @@ call _effects_.
 ```javascript
 // effects.js
 
-let actions = require("./actions"),
-    pubsub = require("./pubsub");
+import actions from "./actions";
+import pubsub from "./pubsub";
 
-function addAlbum(pubSub, state){
+export function addAlbum(pubSub, state){
     pubSub.subscribe(actions.ADD_ALBUM, function(album){
         albums.swap(function(albumList){
             return albumList.push(album);
@@ -304,7 +309,7 @@ function addAlbum(pubSub, state){
     });
 };
 
-module.exports.start = function(pubsub, state){
+export function start(pubsub, state){
     addAlbum(pubsub, state);
     // more effects here
 };
@@ -320,11 +325,12 @@ TODO: Explain the bootstrap process better
 ```javascript
 // main.js
 
-let st = require("./state"),
-    {Albums, Playlists} = require("./views"),
-    pubsub = require("./pubsub"),
-    effects = require("./effects"),
-    React = require("react");
+import React from "react";
+
+import {state} from "./state";
+import {Albums, Playlists} from "./views";
+import pubsub "./pubsub";
+import effects from "./effects";
 
 let App = React.createClass({
     render: function(){
@@ -343,19 +349,14 @@ function render(state){
     React.render(<App state={state} />, document.querySelector("body"));
 };
 
-function bootstrap(){
-    // State
-    let state = atomo.atom(st.initialState);
-
+(function bootstrap(){
     // View
     render(kurtsore.cursor(state));
     state.addWatch(() => render(kurtsore.cursor(state)));
 
     // Effects
     effects.start(pubsub, state);
-};
-
-bootstrap();
+})();
 ```
 
 ### Further reading
