@@ -39,7 +39,7 @@ SOCIAL = (
     ('github', 'https://github.com/dialelo'),
     ('twitter', 'https://twitter.com/dialelo'),
 )
-SHARE = False
+SHARE = True
 
 # Appearance
 DEFAULT_PAGINATION = 10
