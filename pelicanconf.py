@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
 
+PLUGINS = [ 'tipue_search' ]
+PLUGIN_PATH = 'plugins'
+
+DIRECT_TEMPLATES = (('index', 'tags', 'categories', 'authors', 'archives', 'search'))
+
 # Metadata
 AUTHOR = 'Alejandro Gómez'
 SITENAME = 'dialelo'
@@ -27,7 +32,7 @@ AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
 
 # Search
-TIPUE_SEARCH_SAVE_AS = 'tipue_search.json'
+TIPUE_SEARCH_SAVE_AS = 'tipuesearch_content.json'
 
 # Social
 SOCIAL = (
