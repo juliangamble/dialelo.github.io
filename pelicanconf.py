@@ -2,49 +2,48 @@
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
 
+# Metadata
 AUTHOR = 'Alejandro Gómez'
 SITENAME = 'dialelo'
 SITESUBTITLE = ''
 ALTNAME = ''
 DESCRIPTION = ''
-
-#SITEURL = 'http://dialelo.github.io'
-SITEURL = ''
+SITEURL = '/'
 FAVICON = 'favicon.ico'
 
+# Content
 PATH = 'content'
 
+# Lang and locale
 TIMEZONE = 'Europe/Paris'
-
 DEFAULT_LANG = 'en'
-LOCALE = 'en_US'
+LOCALE = 'en'
 
-# Feed generation is usually not desired when developing
-FEED_ALL_ATOM = None
+# Feed
+FEED_ALL_ATOM = 'feeds/atom.xml'
 CATEGORY_FEED_ATOM = None
 TRANSLATION_FEED_ATOM = None
 AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
 
-# Blogroll
-LINKS = []
+# Search
+TIPUE_SEARCH_SAVE_AS = 'tipue_search.json'
 
-# Social widget
+# Social
 SOCIAL = (
-    ('twitter', 'https://twitter.com/dialelo'),
     ('github', 'https://github.com/dialelo'),
+    ('twitter', 'https://twitter.com/dialelo'),
 )
 SHARE = False
 
+# Appearance
 DEFAULT_PAGINATION = 10
-
-# Uncomment following line if you want document-relative URLs when developing
-#RELATIVE_URLS = True
-
+DISPLAY_PAGES_ON_MENU = False
 THEME = 'theme'
 
 DEFAULT_DATE = 'fs'
 
+# Footer
 FOOTER = ("""
 (\u0254) 2015 Alejandro Gómez. All the content licensed under a
 <a href='http://creativecommons.org/licenses/by/4.0/'>
