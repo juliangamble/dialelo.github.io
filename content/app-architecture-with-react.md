@@ -365,7 +365,7 @@ export function logOut(publication, state){
         let action = yield logoutChan;
 
         while (action !== csp.CLOSED) {
-            state.swap((st) => st.remove('user', user))
+            state.swap((st) => st.remove('user'))
             action = yield logoutChan;
         }
     });
