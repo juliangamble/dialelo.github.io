@@ -40,6 +40,7 @@ SOCIAL = (
     ('twitter', 'https://twitter.com/dialelo'),
 )
 SHARE = True
+TWITTER_USERNAME = 'dialelo'
 
 # Appearance
 DEFAULT_PAGINATION = 10
