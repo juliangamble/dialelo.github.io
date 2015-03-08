@@ -170,7 +170,7 @@ import {CursorPropsMixin} from "react-kurtsore";
 export const Album = React.createClass({
     mixins: [ CursorPropsMixin ],
 
-    render: function(){
+    render(){
         let album = this.props.album.deref();
         return <li>{album.get('artist')} - {album.get('title')}</li>;
     }
@@ -179,7 +179,7 @@ export const Album = React.createClass({
 export const Albums = React.createClass({
     mixins: [ CursorPropsMixin ],
 
-    render: function(){
+    render(){
         let albums = this.props.albums.deref(),
             cursors = albums.map((a, idx) => this.props.albums.derive(idx));
 
@@ -407,6 +407,7 @@ look like:
 // main.js
 
 import React from "react";
+import {CursorPropsMixin} from "react-kurtsore";
 
 import {state} from "./state";
 import {Albums, Playlists} from "./views";
@@ -414,7 +415,9 @@ import pubsub "./pubsub";
 import effects from "./effects";
 
 const App = React.createClass({
-    render: function(){
+    mixins: [ CursorPropsMixin ],
+
+    render(){
         let state = this.props.state;
 
         return (
