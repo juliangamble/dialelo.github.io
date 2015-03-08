@@ -413,7 +413,7 @@ import {Albums, Playlists} from "./views";
 import pubsub "./pubsub";
 import effects from "./effects";
 
-let App = React.createClass({
+const App = React.createClass({
     render: function(){
         let state = this.props.state;
 
