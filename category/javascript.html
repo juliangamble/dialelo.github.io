@@ -218,7 +218,7 @@ cursors to its children:</p>
 <span class="kr">export</span> <span class="kr">const</span> <span class="nx">Album</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
     <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
 
-    <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="nx">render</span><span class="p">(){</span>
         <span class="kd">let</span> <span class="nx">album</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">album</span><span class="p">.</span><span class="nx">deref</span><span class="p">();</span>
         <span class="k">return</span> <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">album</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;artist&#39;</span><span class="p">)}</span> <span class="o">-</span> <span class="p">{</span><span class="nx">album</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)}</span><span class="o">&lt;</span><span class="err">/li&gt;;</span>
     <span class="p">}</span>
@@ -227,7 +227,7 @@ cursors to its children:</p>
 <span class="kr">export</span> <span class="kr">const</span> <span class="nx">Albums</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
     <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
 
-    <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="nx">render</span><span class="p">(){</span>
         <span class="kd">let</span> <span class="nx">albums</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">albums</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
             <span class="nx">cursors</span> <span class="o">=</span> <span class="nx">albums</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">a</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">albums</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="nx">idx</span><span class="p">));</span>
 
@@ -437,6 +437,7 @@ look like:</p>
 <div class="highlight"><pre><span class="c1">// main.js</span>
 
 <span class="kr">import</span> <span class="nx">React</span> <span class="nx">from</span> <span class="s2">&quot;react&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">CursorPropsMixin</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;react-kurtsore&quot;</span><span class="p">;</span>
 
 <span class="kr">import</span> <span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./state&quot;</span><span class="p">;</span>
 <span class="kr">import</span> <span class="p">{</span><span class="nx">Albums</span><span class="p">,</span> <span class="nx">Playlists</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./views&quot;</span><span class="p">;</span>
@@ -444,7 +445,9 @@ look like:</p>
 <span class="kr">import</span> <span class="nx">effects</span> <span class="nx">from</span> <span class="s2">&quot;./effects&quot;</span><span class="p">;</span>
 
 <span class="kr">const</span> <span class="nx">App</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
-    <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
+
+    <span class="nx">render</span><span class="p">(){</span>
         <span class="kd">let</span> <span class="nx">state</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">state</span><span class="p">;</span>
 
         <span class="k">return</span> <span class="p">(</span>
