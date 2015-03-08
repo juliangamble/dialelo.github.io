@@ -8,7 +8,7 @@ SITENAME = 'dialelo'
 SITESUBTITLE = ''
 ALTNAME = ''
 DESCRIPTION = ''
-SITEURL = '/'
+SITEURL = 'http://dialelo.github.io'
 FAVICON = 'favicon.ico'
 
 # Content
