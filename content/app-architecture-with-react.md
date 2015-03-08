@@ -1,20 +1,11 @@
 Title: Application Architecture with React: rethinking Flux
 Category: JavaScript
 
-TODO:
-
-- Better title?
-- Use react-kurtsore in views
-- Cover testing of each abstraction?
-- Write a small application putting all this together and push it to a GitHub repo
-
-# Abstract
-
 People coming to [React](http://facebook.github.io/react/) from other frameworks/libraries
 tend to ask themselves how to manage application state since React only solves the UI rendering
 problem, leaving the choice of state management and application architecture to the developer.
-Facebook suggest an approach they call [Flux](http://facebook.github.io/flux/) for organizing
-applications and managing their state.
+Facebook suggest an architecture called [Flux](http://facebook.github.io/flux/) that fits
+with the React rendering model.
 
 In this article I will explore a way to manage state in JavaScript applications using
 React as their UI layer and recast Facebook's Flux conceptual framework using ideas
@@ -25,6 +16,8 @@ from [ClojureScript](https://github.com/clojure/clojurescript) libraries like [O
 Flux's core idea is that [data should flow in one direction](http://facebook.github.io/flux/docs/overview.html#structure-and-data-flow).
 This makes reasoning about applications easier, dependencies between system components are well-defined and all
 state changes come from a "single source of truth", as they put it.
+
+![](http://facebook.github.io/flux/img/flux-simple-f8-diagram-explained-1300w.png)
 
 In a nutshell: [Views](http://facebook.github.io/flux/docs/overview.html#views-and-controller-views)
 trigger [Actions](http://facebook.github.io/flux/docs/overview.html#actions) which are notified to [Stores](http://facebook.github.io/flux/docs/overview.html#stores)
@@ -37,14 +30,14 @@ There are several things I dislike about Flux, namely:
 - It complects state management and the bussiness logic for causing state changes.
 - State is scattered through various stores which are apparently modular albeit they end up
   knowing about each other.
-- The stores are coupled with the dispatching mechanism and actions that can happen on the
-  system.
+- The stores are coupled with the dispatching mechanism.
+
 
 ## From Stores to Global immutable state
 
 Instead of having multiple stores, I suggest Om's approach of having a global mutable reference
 to an immutable data structure. This way we model our application state as a succesion of immutable
-values, without modifying data in-place or rebinding variables to different values.
+values, without modifying data in-place or rebinding variables to different values over time.
 
 This can be easily achieved using my [atomo](https://github.com/dialelo/atomo) library and Facebook's
 [immutable-js](https://github.com/facebook/immutable-js).
@@ -57,9 +50,10 @@ here is a contrived example of the shape of a music application state:
 ```javascript
 // state.js
 
-import immutable from "immutable";
+import {fromJS} from "immutable";
 
-let initialState = immutable.fromJS({
+let initialState = fromJS({
+    user: null,
     albums: [
         {
             title: "La Leyenda del Tiempo",
@@ -102,10 +96,10 @@ way:
 ```javascript
 // history.js
 
-import immutable from "immutable";
+import {List} from "immutable";
 import {state} from "./state";
 
-const history = atomo.atom(new immutable.List());
+const history = atomo.atom(new List());
 
 state.addWatch(function(atom, oldValue, newValue){
     history.swap((hs) => hs.push(oldValue));
@@ -132,18 +126,19 @@ We can derive a cursor from an atom or another cursor, allowing us to refine the
 
 ```javascript
 import kurtsore from "kurtsore";
+import {is} from "immutable";
 
 let cursor = kurtsore.cursor(state),
     albums = cursor.derive('albums'),
     playlists = cursor.derive('playlists');
 
-immutable.is(
+is(
     albums.deref(),
     state.deref().get('albums')
 );
 //=> true
 
-immutable.is(
+is(
     playlists.deref(),
     state.deref().get('playlists')
 );
@@ -156,13 +151,25 @@ We can create a cursor without a path for the top-level component, and refine it
 sub-components. With this approach we can have modular views that represent a substructure of the global
 immutable state without knowing about the overall state.
 
+Since cursors save a snapshot of the state they point to when created and immutable data
+equality checks are blazing fast since they are just a reference comparison, they allow us to know
+whether a component should update and implement a very efficient `shouldComponentUpdate`. You
+can see an example in my [react-kurtsore](https://github.com/dialelo/react-kurtsore) library
+and other open source libraries such as [Omniscient](https://github.com/omniscientjs/omniscient).
+
 Here is an example of a component that displays a sub-component of the global state and passes refined
 cursors to its children:
 
 ```javascript
 // views.js
 
+import React from "react";
+import {CursorPropsMixin} from "react-kurtsore";
+
+
 export const Album = React.createClass({
+    mixins: [ CursorPropsMixin ],
+
     render: function(){
         let album = this.props.album.deref();
         return <li>{album.get('artist')} - {album.get('title')}</li>;
@@ -170,6 +177,8 @@ export const Album = React.createClass({
 });
 
 export const Albums = React.createClass({
+    mixins: [ CursorPropsMixin ],
+
     render: function(){
         let albums = this.props.albums.deref(),
             cursors = albums.map((a, idx) => this.props.albums.derive(idx));
@@ -185,13 +194,37 @@ export const Albums = React.createClass({
 });
 ```
 
-Since cursors save a snapshot of the state they point to when created and immutable data
-equality checks are blazing fast since they are just a reference comparison, they allow us to know
-whether a component should update and implement a very efficient `shouldComponentUpdate`. You
-can see an example in my [react-kurtsore](https://github.com/dialelo/react-kurtsore) library
-and other open source libraries such as [Omniscient](https://github.com/omniscientjs/omniscient).
+## Actions
 
-## Getting rid of the dispatcher
+As in Flux, actions can be identified with unique and constant values. For this we can use strings
+or ES6 symbols.
+
+```javascript
+//  constants.js
+
+export const ACTIONS = {
+    LOG_IN: Symbol.for("user:log-in"),
+    LOG_IN_FAILED: Symbol.for("user:log-in-failed"),
+    LOG_OUT: Symbol.for("user:log-out")
+};
+```
+
+We represent actions as an immutable record with `type` and `payload` attributes,
+where the type is the identifier constant and the payload can be an arbitrary immutable value.
+
+```javascript
+// actions.js
+
+import immutable from "immutable";
+
+export const Action = immutable.Record({type: null, payload: null});
+
+export function action(type, payload){
+    return new Action({type, payload});
+};
+```
+
+### Getting rid of the dispatcher
 
 Flux proposes the singleton Dispatcher coupled to stores for triggering state transitions. This introduces
 dependencies between stores, making them know about each other and the order the actions must be processed
@@ -223,30 +256,30 @@ export function publish(msg){
 ```
 
 The publication allows other components of the system to subscribe to a topic, providing a channel where the
-values that share the given topic will be put. If our actions are a immutable data structure with `type` and
-`payload` fields, we could subscribe to actions with the approach shown below:
+values that share the given topic will be put. We can subscribe to actions with the approach shown below:
 
 ```javascript
 import csp from "js-csp";
 import pubsub from "./pubsub";
+import {ACTIONS} from "./constants";
 
 let userChan = csp.chan(),
     pub = pubsub.publication((v) => v.get("type"));
 
-pub.sub("user:log-in", userChan);
-pub.sub("user:log-out", userChan);
+pub.sub(ACTIONS.LOG_IN, userChan);
+pub.sub(ACTIONS.LOG_OUT, userChan);
 
 csp.go(function*(){
     let action = yield userChan;
 
-    while (userChan !== csp.CLOSED) {
-        let actionType = action.get("type"),
-            user = action.get("payload");
+    while (action !== csp.CLOSED) {
+        let {type} = action;
 
-        if (actionType === "user:log-in") {
+        if (type === ACTIONS.LOG_IN) {
+            let user = action.get("payload");
             console.log(user, " just logged in.")
-        } else  {
-            console.log(user, " just logged out.");
+        } else {
+            console.log("The user just logged out.");
         }
 
         action = yield userChan;
@@ -259,23 +292,7 @@ the generator passed to `go` will run indefinitely, listening for the actions th
 and logging those events to the console. Note that the generator passed to `go` will only resume when
 `userChan` has values available, so it's safe to use a while loop inside it.
 
-## Actions
-
-As in Flux, actions can be identified with unique and constant values. For this we can use strings
-or ES6 symbols. We represent actions as an immutable record with `type` and `payload` attributes,
-where the type is the identifier constant and the payload can be an arbitrary immutable value.
-
-```javascript
-// actions.js
-
-import immutable from "immutable";
-
-export const Action = immutable.Record({type: null, payload: null});
-
-export function action(type, payload){
-    return new Action({type, payload});
-};
-```
+### Publishing actions
 
 Since some actions may require asynchronous computations to get the data they need and for the sake of
 decoupling views from the actions and the dispatch machinery, we encapsulate action
@@ -286,8 +303,28 @@ actions from the views themselves because it decouples views from the system's c
 We also gain the benefit of testing views in isolation since we can interact with them and make sure they
 consume our high-level APIs in the way they are supposed to.
 
+```javascript
+// authentication.js
 
-### Interpreting actions out of stores
+import {ACTIONS} from "./constants";
+import {action} from "./actions";
+import pubsub from "./pubsub";
+import http from "./http";
+import {fromJS} from "immutable";
+
+
+export function tryLogIn(username, password){
+    http.post("/login", {username, password})
+        .then((user) => pubsub.publish(action(ACTIONS.LOG_IN, fromJS(user))))
+        .catch((errors) => pubsub.publish(action(ACTIONS.LOG_IN_FAILED, fromJS(errors))))
+};
+
+export function logout(username, password){
+    pubsub.publish(action(ACTIONS.LOG_OUT));
+};
+```
+
+### Interpreting actions
 
 Having a pub-sub mechanism in place allows us to encapsulate state transitions
 into small pieces. These can listen for specific actions (or combinations of actions) on the
@@ -297,29 +334,74 @@ call _effects_.
 ```javascript
 // effects.js
 
-import actions from "./actions";
-import pubsub from "./pubsub";
+import csp from "js-csp";
+import {ACTIONS} from "./constants";
 
-export function addAlbum(pubSub, state){
-    pubSub.subscribe(actions.ADD_ALBUM, function(album){
-        albums.swap(function(albumList){
-            return albumList.push(album);
-        });
+
+export function logIn(publication, state){
+    let loginChan = csp.chan();
+
+    publication.sub(ACTIONS.LOG_IN, loginChan);
+
+    csp.go(function*(){
+        let action = yield loginChan;
+
+        while (action !== csp.CLOSED) {
+            let user = action.get("payload");
+            state.swap((st) => st.set('user', user))
+            action = yield loginChan;
+        }
     });
+
+    return loginChan;
 };
 
-export function start(pubsub, state){
-    addAlbum(pubsub, state);
-    // more effects here
+export function logOut(publication, state){
+    let logoutChan = csp.chan();
+
+    publication.sub(ACTIONS.LOG_OUT, logoutChan);
+
+    csp.go(function*(){
+        let action = yield logoutChan;
+
+        while (action !== csp.CLOSED) {
+            state.swap((st) => st.remove('user', user))
+            action = yield logoutChan;
+        }
+    });
+
+    return logoutChan;
 };
+
+```
+
+We can test `logIn` and `logOut` effects in isolation inyecting a publication and an atom.
+Note that the `logIn` and `logOut` effects are started when calling them and return the channel they
+listen to, giving us the ability to shut them down closing the channel. If we group together a set of effects we could
+create a stateful object that allowed us to start and stop them at will.
+
+```javascript
+// effects.js
+
+class Effects {
+    start(publication, state){
+        this.chans = [
+            logIn(publication, state),
+            logOut(publication, state)
+        ];
+    },
+    stop(){
+        this.chans.map((ch) => ch.close());
+    }
+}
+
+export default new Effects();
 ```
 
 ## Putting it all together
 
 With all of the above, here is an example of how the entry point of an application could
 look like:
-
-TODO: Explain the bootstrap process better
 
 ```javascript
 // main.js
@@ -353,11 +435,17 @@ function render(state){
     render(kurtsore.cursor(state));
     state.addWatch(() => render(kurtsore.cursor(state)));
 
+    // Pub-sub
+    let publication = pubsub.publication((ac) => ac.get("type"));
+
     // Effects
-    effects.start(pubsub, state);
+    effects.start(publication, state);
 })();
 ```
 
 ### Further reading
 
-TODO
+- [The Future of JavaScript MVC Frameworks](http://swannodette.github.io/2013/12/17/the-future-of-javascript-mvcs/)
+- [Time Travel](http://swannodette.github.io/2013/12/31/time-travel/)
+- [ES6 Generators and CSP](http://swannodette.github.io/2013/08/24/es6-generators-and-csp/)
+- [Taming the Asynchronous Beast with CSP Channels in JavaScript](http://jlongster.com/Taming-the-Asynchronous-Beast-with-CSP-in-JavaScript)
