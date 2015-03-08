@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html lang="en" class="no-js lt-ie9 lt-ie8 lt-ie7" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <![endif]-->
+<!--[if IE 7]>         <html lang="en" class="no-js lt-ie9 lt-ie8" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <![endif]-->
+<!--[if IE 8]>         <html lang="en" class="no-js lt-ie9" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en" class="no-js" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <!--<![endif]-->
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>dialelo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="">
+<link rel="shortcut icon" href="/favicon.ico" type="">
+<meta name="author" content="Alejandro Gómez">
+<meta name="copyright" content="Alejandro Gómez">
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@" />
+<meta property="og:site_name" content="dialelo" />
+<meta property="og:title" content="dialelo" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="" />
+<meta name="twitter:url" content="" />
+<meta itemprop="name" content="dialelo" />
+<meta itemprop="url" content=""/>
+<link href="/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="dialelo ATOM Feed"/>
+<link href='//fonts.googleapis.com/css?family=Open+Sans:800italic' rel='stylesheet' type='text/css'>
+<link href='//fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/css/uikit.min.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/css/components/search.min.css">
+<link rel="stylesheet" href="/theme/css/tipuesearch.css">
+<link rel="stylesheet" href="/theme/css/solarized.css">
+<link rel="stylesheet" href="/theme/css/main.css">
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+</head>
+<body>
+<!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+<header class=" mg-header uk-navbar uk-navbar-attached">
+
+    <div class="uk-container uk-container-center">
+        <div class="uk-grid" data-uk-grid-margin>
+
+            <a class="mg-brand uk-navbar-brand uk-hidden-small" href="">dialelo</a>
+            <div class="mg-tagline uk-navbar-content uk-hidden-small"></div>
+            <a class="uk-navbar-toggle uk-visible-small" href="#mg-offcanvas" data-uk-offcanvas></a>
+            <a class="mg-brand uk-navbar-brand uk-navbar-center uk-visible-small" href="">dialelo</a>
+
+        </div>
+    </div>
+</header>
+
+<main class="mg-main">
+
+<div class="uk-container uk-container-center">
+
+    <div class="uk-grid" data-uk-grid-margin>
+
+<div class="uk-width-medium-4-5">
+
+
+            <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
+                <a href="/application-architecture-with-react-rethinking-flux.html" class="uk-article-title uk-link-muted" itemprop="name">Application Architecture with React: rethinking Flux</a>
+                <p class="uk-article-meta"><time datetime="2015-03-08" itemprop="datePublished">Sun 08 March 2015</time> • <a href="/category/javascript.html">JavaScript</a></p>
+</p>
+                <p class="uk-article-lead" itemprop="description">People coming to React from other frameworks/libraries tend to ask themselves how to manage application state since React only solves the UI rendering problem, leaving the choice of state management and application architecture to the developer. Facebook suggest an architecture called Flux that fits with the React rendering model ...</p>
+                <section itemprop="articleBody"><p>People coming to <a href="http://facebook.github.io/react/">React</a> from other frameworks/libraries
+tend to ask themselves how to manage application state since React only solves the UI rendering
+problem, leaving the choice of state management and application architecture to the developer.
+Facebook suggest an architecture called <a href="http://facebook.github.io/flux/">Flux</a> that fits
+with the React rendering model.</p>
+<p>In this article I will explore a way to manage state in JavaScript applications using
+React as their UI layer and recast Facebook's Flux conceptual framework using ideas
+from <a href="https://github.com/clojure/clojurescript">ClojureScript</a> libraries like <a href="https://github.com/omcljs/om">Om</a>.</p>
+<h2>Flux</h2>
+<p>Flux's core idea is that <a href="http://facebook.github.io/flux/docs/overview.html#structure-and-data-flow">data should flow in one direction</a>.
+This makes reasoning about applications easier, dependencies between system components are well-defined and all
+state changes come from a "single source of truth", as they put it.</p>
+<p><img alt="" src="http://facebook.github.io/flux/img/flux-simple-f8-diagram-explained-1300w.png" /></p>
+<p>In a nutshell: <a href="http://facebook.github.io/flux/docs/overview.html#views-and-controller-views">Views</a>
+trigger <a href="http://facebook.github.io/flux/docs/overview.html#actions">Actions</a> which are notified to <a href="http://facebook.github.io/flux/docs/overview.html#stores">Stores</a>
+by a <a href="http://facebook.github.io/flux/docs/dispatcher.html#content">Dispatcher</a>.
+Stores respond to actions modifying their state. Since views consume data from Stores and display it,
+Store updates trigger re-renders in the UI when needed.</p>
+<p>There are several things I dislike about Flux, namely:</p>
+<ul>
+<li>It complects state management and the bussiness logic for causing state changes.</li>
+<li>State is scattered through various stores which are apparently modular albeit they end up
+  knowing about each other.</li>
+<li>The stores are coupled with the dispatching mechanism.</li>
+</ul>
+<h2>From Stores to Global immutable state</h2>
+<p>Instead of having multiple stores, I suggest Om's approach of having a global mutable reference
+to an immutable data structure. This way we model our application state as a succesion of immutable
+values, without modifying data in-place or rebinding variables to different values over time.</p>
+<p>This can be easily achieved using my <a href="https://github.com/dialelo/atomo">atomo</a> library and Facebook's
+<a href="https://github.com/facebook/immutable-js">immutable-js</a>.
+The data structure contained in the global atom would be a map, which gives us the ability to
+split data into separate logical domains using keys.</p>
+<p>This approach doesn't try to hide the fact that separate logical domains tend to refer to each other,
+here is a contrived example of the shape of a music application state:</p>
+<div class="highlight"><pre><span class="c1">// state.js</span>
+
+<span class="kr">import</span> <span class="p">{</span><span class="nx">fromJS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">initialState</span> <span class="o">=</span> <span class="nx">fromJS</span><span class="p">({</span>
+    <span class="nx">user</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nx">albums</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nx">title</span><span class="o">:</span> <span class="s2">&quot;La Leyenda del Tiempo&quot;</span><span class="p">,</span>
+            <span class="nx">artist</span><span class="o">:</span> <span class="s2">&quot;Camarón&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nx">title</span><span class="o">:</span> <span class="s2">&quot;Veneno&quot;</span><span class="p">,</span>
+            <span class="nx">artist</span><span class="o">:</span> <span class="s2">&quot;Veneno&quot;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nx">playlists</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nx">name</span><span class="o">:</span> <span class="s2">&quot;Flamenco&quot;</span><span class="p">,</span>
+            <span class="nx">tracks</span><span class="o">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="nx">title</span><span class="o">:</span> <span class="s2">&quot;Nana del Caballo Grande&quot;</span><span class="p">,</span>
+                    <span class="nx">artist</span><span class="o">:</span> <span class="s2">&quot;Camarón&quot;</span><span class="p">,</span>
+                    <span class="nx">album</span><span class="o">:</span> <span class="s2">&quot;La Leyenda del Tiempo&quot;</span>
+                <span class="p">}</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<p>We can create the global mutable atom very easily from an immutable data structure:</p>
+<div class="highlight"><pre><span class="c1">// state.js</span>
+
+<span class="kr">import</span> <span class="nx">atomo</span> <span class="nx">from</span> <span class="s2">&quot;atomo&quot;</span><span class="p">;</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">state</span> <span class="o">=</span> <span class="nx">atomo</span><span class="p">.</span><span class="nx">atom</span><span class="p">(</span><span class="nx">initialState</span><span class="p">);</span>
+</pre></div>
+
+
+<p>Since atoms are observable and the immutable values they refer to share structure when creating
+a new, modified value out of them, we can serialize the states our application in a memory-efficient
+way:</p>
+<div class="highlight"><pre><span class="c1">// history.js</span>
+
+<span class="kr">import</span> <span class="p">{</span><span class="nx">List</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./state&quot;</span><span class="p">;</span>
+
+<span class="kr">const</span> <span class="nx">history</span> <span class="o">=</span> <span class="nx">atomo</span><span class="p">.</span><span class="nx">atom</span><span class="p">(</span><span class="k">new</span> <span class="nx">List</span><span class="p">());</span>
+
+<span class="nx">state</span><span class="p">.</span><span class="nx">addWatch</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">atom</span><span class="p">,</span> <span class="nx">oldValue</span><span class="p">,</span> <span class="nx">newValue</span><span class="p">){</span>
+    <span class="nx">history</span><span class="p">.</span><span class="nx">swap</span><span class="p">((</span><span class="nx">hs</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">oldValue</span><span class="p">));</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<p>This gives us the ability of time-travelling for free, it's trivial to implement undo/redo functionality
+on top of this state management strategy. If we were to serialize the succession of actions and their payload
+in the system we would be able to replay a user interaction with our application very easily, making regression
+testing as simple as feeding the aforementioned actions to the system and asserting that we end up with a consistent
+state.</p>
+<h3>Cursors</h3>
+<p>We don't want to be passing around all the state to every view. Views usually display a subset of the global state
+so we need the ability to focus on paths inside the global immutable state for making our views modular.</p>
+<p>Om solves this problem with an abstraction called <a href="https://github.com/omcljs/om/wiki/Cursors">Cursor</a>, which
+lets us focus on a path of the global atom and offer the same API as atoms. This allows views to treat the substructure
+as their data source and even modify it with the same operations as the Atom. I wrote a <a href="https://github.com/dialelo/kurtsore">simple
+implementation</a> of this concept for using it with atoms and immutable data.</p>
+<p>We can derive a cursor from an atom or another cursor, allowing us to refine the path they point to:</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nx">kurtsore</span> <span class="nx">from</span> <span class="s2">&quot;kurtsore&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">is</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">cursor</span> <span class="o">=</span> <span class="nx">kurtsore</span><span class="p">.</span><span class="nx">cursor</span><span class="p">(</span><span class="nx">state</span><span class="p">),</span>
+    <span class="nx">albums</span> <span class="o">=</span> <span class="nx">cursor</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;albums&#39;</span><span class="p">),</span>
+    <span class="nx">playlists</span> <span class="o">=</span> <span class="nx">cursor</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;playlists&#39;</span><span class="p">);</span>
+
+<span class="nx">is</span><span class="p">(</span>
+    <span class="nx">albums</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
+    <span class="nx">state</span><span class="p">.</span><span class="nx">deref</span><span class="p">().</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;albums&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+<span class="c1">//=&gt; true</span>
+
+<span class="nx">is</span><span class="p">(</span>
+    <span class="nx">playlists</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
+    <span class="nx">state</span><span class="p">.</span><span class="nx">deref</span><span class="p">().</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;playlists&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+<span class="c1">//=&gt; true</span>
+</pre></div>
+
+
+<h2>Views</h2>
+<p>We can create a cursor without a path for the top-level component, and refine it when passing it to
+sub-components. With this approach we can have modular views that represent a substructure of the global
+immutable state without knowing about the overall state.</p>
+<p>Since cursors save a snapshot of the state they point to when created and immutable data
+equality checks are blazing fast since they are just a reference comparison, they allow us to know
+whether a component should update and implement a very efficient <code>shouldComponentUpdate</code>. You
+can see an example in my <a href="https://github.com/dialelo/react-kurtsore">react-kurtsore</a> library
+and other open source libraries such as <a href="https://github.com/omniscientjs/omniscient">Omniscient</a>.</p>
+<p>Here is an example of a component that displays a sub-component of the global state and passes refined
+cursors to its children:</p>
+<div class="highlight"><pre><span class="c1">// views.js</span>
+
+<span class="kr">import</span> <span class="nx">React</span> <span class="nx">from</span> <span class="s2">&quot;react&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">CursorPropsMixin</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;react-kurtsore&quot;</span><span class="p">;</span>
+
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">Album</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
+
+    <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">album</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">album</span><span class="p">.</span><span class="nx">deref</span><span class="p">();</span>
+        <span class="k">return</span> <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">album</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;artist&#39;</span><span class="p">)}</span> <span class="o">-</span> <span class="p">{</span><span class="nx">album</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)}</span><span class="o">&lt;</span><span class="err">/li&gt;;</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">Albums</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
+
+    <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">albums</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">albums</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
+            <span class="nx">cursors</span> <span class="o">=</span> <span class="nx">albums</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">a</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">albums</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="nx">idx</span><span class="p">));</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="o">&lt;</span><span class="nx">ul</span><span class="o">&gt;</span>
+                <span class="p">{</span><span class="nx">cursors</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span>
+                    <span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="o">&lt;</span><span class="nx">Album</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">idx</span><span class="p">}</span> <span class="nx">album</span><span class="o">=</span><span class="p">{</span><span class="nx">a</span><span class="p">}</span> <span class="o">/&gt;</span>
+                <span class="p">)}</span>
+            <span class="o">&lt;</span><span class="err">/ul&gt;</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<h2>Actions</h2>
+<p>As in Flux, actions can be identified with unique and constant values. For this we can use strings
+or ES6 symbols.</p>
+<div class="highlight"><pre><span class="c1">//  constants.js</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">ACTIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">LOG_IN</span><span class="o">:</span> <span class="nx">Symbol</span><span class="p">.</span><span class="k">for</span><span class="p">(</span><span class="s2">&quot;user:log-in&quot;</span><span class="p">),</span>
+    <span class="nx">LOG_IN_FAILED</span><span class="o">:</span> <span class="nx">Symbol</span><span class="p">.</span><span class="k">for</span><span class="p">(</span><span class="s2">&quot;user:log-in-failed&quot;</span><span class="p">),</span>
+    <span class="nx">LOG_OUT</span><span class="o">:</span> <span class="nx">Symbol</span><span class="p">.</span><span class="k">for</span><span class="p">(</span><span class="s2">&quot;user:log-out&quot;</span><span class="p">)</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>We represent actions as an immutable record with <code>type</code> and <code>payload</code> attributes,
+where the type is the identifier constant and the payload can be an arbitrary immutable value.</p>
+<div class="highlight"><pre><span class="c1">// actions.js</span>
+
+<span class="kr">import</span> <span class="nx">immutable</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">Action</span> <span class="o">=</span> <span class="nx">immutable</span><span class="p">.</span><span class="nx">Record</span><span class="p">({</span><span class="nx">type</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">payload</span><span class="o">:</span> <span class="kc">null</span><span class="p">});</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">action</span><span class="p">(</span><span class="nx">type</span><span class="p">,</span> <span class="nx">payload</span><span class="p">){</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nx">Action</span><span class="p">({</span><span class="nx">type</span><span class="p">,</span> <span class="nx">payload</span><span class="p">});</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<h3>Getting rid of the dispatcher</h3>
+<p>Flux proposes the singleton Dispatcher coupled to stores for triggering state transitions. This introduces
+dependencies between stores, making them know about each other and the order the actions must be processed
+by each store. Dispatchers are also different from a pub-sub mechanism in that they fan-out every action
+that is triggered on them to all the stores.</p>
+<p>I instead suggest using <a href="http://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP</a> channels for
+the actions pub-sub mechanism, which you get with the <a href="https://github.com/ubolonton/js-csp">js-csp</a> library.</p>
+<p>The pub-sub system has a channel in which actions are published, and we can derive a publication from it. The
+publication takes the source channel and a function that extracts the "topic" of the messages put into the
+source channel. For ease of testing we can make the source channel configurable using an atom:</p>
+<div class="highlight"><pre><span class="c1">// pubsub.js</span>
+
+<span class="kr">import</span> <span class="nx">atomo</span> <span class="nx">from</span> <span class="s2">&quot;atomo&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">source</span> <span class="o">=</span> <span class="nx">atomo</span><span class="p">.</span><span class="nx">atom</span><span class="p">(</span><span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">());</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">publication</span><span class="p">(</span><span class="nx">topicFn</span><span class="p">){</span>
+    <span class="k">return</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">operations</span><span class="p">.</span><span class="nx">pub</span><span class="p">.</span><span class="nx">publication</span><span class="p">(</span><span class="nx">source</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span> <span class="nx">topicFn</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">publish</span><span class="p">(</span><span class="nx">msg</span><span class="p">){</span>
+    <span class="nx">csp</span><span class="p">.</span><span class="nx">putAsync</span><span class="p">(</span><span class="nx">source</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span> <span class="nx">msg</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>The publication allows other components of the system to subscribe to a topic, providing a channel where the
+values that share the given topic will be put. We can subscribe to actions with the approach shown below:</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">pubsub</span> <span class="nx">from</span> <span class="s2">&quot;./pubsub&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">ACTIONS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./constants&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">userChan</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">(),</span>
+    <span class="nx">pub</span> <span class="o">=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publication</span><span class="p">((</span><span class="nx">v</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">v</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">));</span>
+
+<span class="nx">pub</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">,</span> <span class="nx">userChan</span><span class="p">);</span>
+<span class="nx">pub</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_OUT</span><span class="p">,</span> <span class="nx">userChan</span><span class="p">);</span>
+
+<span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+    <span class="kd">let</span> <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">userChan</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="nx">action</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">let</span> <span class="p">{</span><span class="nx">type</span><span class="p">}</span> <span class="o">=</span> <span class="nx">action</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">let</span> <span class="nx">user</span> <span class="o">=</span> <span class="nx">action</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;payload&quot;</span><span class="p">);</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="s2">&quot; just logged in.&quot;</span><span class="p">)</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;The user just logged out.&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">userChan</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<p>The <code>userChan</code> above is channel that will receive log-in and log-out actions published to the system;
+the generator passed to <code>go</code> will run indefinitely, listening for the actions that <code>userChan</code> receives
+and logging those events to the console. Note that the generator passed to <code>go</code> will only resume when
+<code>userChan</code> has values available, so it's safe to use a while loop inside it.</p>
+<h3>Publishing actions</h3>
+<p>Since some actions may require asynchronous computations to get the data they need and for the sake of
+decoupling views from the actions and the dispatch machinery, we encapsulate action
+triggering in high-level APIs that the views can consume. Flux calls this high-level APIs action creators.</p>
+<p>I suggest to encapsulate every action publication in one of these functions instead of publishing
+actions from the views themselves because it decouples views from the system's communication machinery.
+We also gain the benefit of testing views in isolation since we can interact with them and make sure they
+consume our high-level APIs in the way they are supposed to.</p>
+<div class="highlight"><pre><span class="c1">// authentication.js</span>
+
+<span class="kr">import</span> <span class="p">{</span><span class="nx">ACTIONS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./constants&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">action</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./actions&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">pubsub</span> <span class="nx">from</span> <span class="s2">&quot;./pubsub&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">http</span> <span class="nx">from</span> <span class="s2">&quot;./http&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">fromJS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">tryLogIn</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">){</span>
+    <span class="nx">http</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s2">&quot;/login&quot;</span><span class="p">,</span> <span class="p">{</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">})</span>
+        <span class="p">.</span><span class="nx">then</span><span class="p">((</span><span class="nx">user</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="nx">action</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">,</span> <span class="nx">fromJS</span><span class="p">(</span><span class="nx">user</span><span class="p">))))</span>
+        <span class="p">.</span><span class="k">catch</span><span class="p">((</span><span class="nx">errors</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="nx">action</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN_FAILED</span><span class="p">,</span> <span class="nx">fromJS</span><span class="p">(</span><span class="nx">errors</span><span class="p">))))</span>
+<span class="p">};</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">logout</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">){</span>
+    <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="nx">action</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_OUT</span><span class="p">));</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<h3>Interpreting actions</h3>
+<p>Having a pub-sub mechanism in place allows us to encapsulate state transitions
+into small pieces. These can listen for specific actions (or combinations of actions) on the
+pub-sub and affect the state accordingly, isolating bussines logic into modular and testable units I
+call <em>effects</em>.</p>
+<div class="highlight"><pre><span class="c1">// effects.js</span>
+
+<span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">ACTIONS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./constants&quot;</span><span class="p">;</span>
+
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">logIn</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">){</span>
+    <span class="kd">let</span> <span class="nx">loginChan</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">();</span>
+
+    <span class="nx">publication</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">,</span> <span class="nx">loginChan</span><span class="p">);</span>
+
+    <span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">loginChan</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="nx">action</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">let</span> <span class="nx">user</span> <span class="o">=</span> <span class="nx">action</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;payload&quot;</span><span class="p">);</span>
+            <span class="nx">state</span><span class="p">.</span><span class="nx">swap</span><span class="p">((</span><span class="nx">st</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">st</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="nx">user</span><span class="p">))</span>
+            <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">loginChan</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">});</span>
+
+    <span class="k">return</span> <span class="nx">loginChan</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">logOut</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">){</span>
+    <span class="kd">let</span> <span class="nx">logoutChan</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">();</span>
+
+    <span class="nx">publication</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_OUT</span><span class="p">,</span> <span class="nx">logoutChan</span><span class="p">);</span>
+
+    <span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">logoutChan</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="nx">action</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">state</span><span class="p">.</span><span class="nx">swap</span><span class="p">((</span><span class="nx">st</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">st</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">))</span>
+            <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">logoutChan</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">});</span>
+
+    <span class="k">return</span> <span class="nx">logoutChan</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>We can test <code>logIn</code> and <code>logOut</code> effects in isolation inyecting a publication and an atom.
+Note that the <code>logIn</code> and <code>logOut</code> effects are started when calling them and return the channel they
+listen to, giving us the ability to shut them down closing the channel. If we group together a set of effects we could
+create a stateful object that allowed us to start and stop them at will.</p>
+<div class="highlight"><pre><span class="c1">// effects.js</span>
+
+<span class="kr">class</span> <span class="nx">Effects</span> <span class="p">{</span>
+    <span class="nx">start</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">){</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">chans</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="nx">logIn</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">),</span>
+            <span class="nx">logOut</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">)</span>
+        <span class="p">];</span>
+    <span class="p">},</span>
+    <span class="nx">stop</span><span class="p">(){</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">chans</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">ch</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">ch</span><span class="p">.</span><span class="nx">close</span><span class="p">());</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kr">export</span> <span class="k">default</span> <span class="k">new</span> <span class="nx">Effects</span><span class="p">();</span>
+</pre></div>
+
+
+<h2>Putting it all together</h2>
+<p>With all of the above, here is an example of how the entry point of an application could
+look like:</p>
+<div class="highlight"><pre><span class="c1">// main.js</span>
+
+<span class="kr">import</span> <span class="nx">React</span> <span class="nx">from</span> <span class="s2">&quot;react&quot;</span><span class="p">;</span>
+
+<span class="kr">import</span> <span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./state&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">Albums</span><span class="p">,</span> <span class="nx">Playlists</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./views&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">pubsub</span> <span class="s2">&quot;./pubsub&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">effects</span> <span class="nx">from</span> <span class="s2">&quot;./effects&quot;</span><span class="p">;</span>
+
+<span class="kr">const</span> <span class="nx">App</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">render</span><span class="o">:</span> <span class="kd">function</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">state</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">state</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+                <span class="o">&lt;</span><span class="nx">Albums</span> <span class="nx">state</span><span class="o">=</span><span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;albums&#39;</span><span class="p">)}</span> <span class="o">/&gt;</span>
+                <span class="o">&lt;</span><span class="nx">Playlists</span> <span class="nx">state</span><span class="o">=</span><span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;playlists&#39;</span><span class="p">)}</span> <span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+
+<span class="kd">function</span> <span class="nx">render</span><span class="p">(</span><span class="nx">state</span><span class="p">){</span>
+    <span class="nx">React</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="o">&lt;</span><span class="nx">App</span> <span class="nx">state</span><span class="o">=</span><span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="o">/&gt;</span><span class="p">,</span> <span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">));</span>
+<span class="p">};</span>
+
+<span class="p">(</span><span class="kd">function</span> <span class="nx">bootstrap</span><span class="p">(){</span>
+    <span class="c1">// View</span>
+    <span class="nx">render</span><span class="p">(</span><span class="nx">kurtsore</span><span class="p">.</span><span class="nx">cursor</span><span class="p">(</span><span class="nx">state</span><span class="p">));</span>
+    <span class="nx">state</span><span class="p">.</span><span class="nx">addWatch</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">render</span><span class="p">(</span><span class="nx">kurtsore</span><span class="p">.</span><span class="nx">cursor</span><span class="p">(</span><span class="nx">state</span><span class="p">)));</span>
+
+    <span class="c1">// Pub-sub</span>
+    <span class="kd">let</span> <span class="nx">publication</span> <span class="o">=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publication</span><span class="p">((</span><span class="nx">ac</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">ac</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">));</span>
+
+    <span class="c1">// Effects</span>
+    <span class="nx">effects</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">);</span>
+<span class="p">})();</span>
+</pre></div>
+
+
+<h3>Further reading</h3>
+<ul>
+<li><a href="http://swannodette.github.io/2013/12/17/the-future-of-javascript-mvcs/">The Future of JavaScript MVC Frameworks</a></li>
+<li><a href="http://swannodette.github.io/2013/12/31/time-travel/">Time Travel</a></li>
+<li><a href="http://swannodette.github.io/2013/08/24/es6-generators-and-csp/">ES6 Generators and CSP</a></li>
+<li><a href="http://jlongster.com/Taming-the-Asynchronous-Beast-with-CSP-in-JavaScript">Taming the Asynchronous Beast with CSP Channels in JavaScript</a></li>
+</ul></section>
+                <a href="/application-architecture-with-react-rethinking-flux.html#disqus_thread"></a>
+                <hr class="uk-article-divider">
+            </article>
+
+
+</div>
+
+        <div class="uk-width-medium-1-5 uk-hidden-small">
+
+            <div class="uk-panel uk-panel-box">
+                <form class="uk-search" action="search.html" data-uk-search>
+                    <input class="uk-search-field tipue_search" type="search" name="q" id="tipue_search_input" autocomplete="off" placeholder="Search...">
+                </form>
+            </div>
+
+            <div class="uk-panel uk-panel-box">
+                <ul class="uk-nav uk-nav-side">
+                    <li class="uk-nav-header">Categories</li>
+                    <li ><a href="/category/javascript.html">JavaScript</a></li>
+
+                    <li class="uk-nav-divider"></li>
+                    <li ><a href="/archives.html">Archives</a></li>
+                </ul>
+            </div>
+
+            <div class="uk-panel uk-panel-box">
+                <h3 class="uk-panel-title">Receive Updates</h3>
+                <a rel="alternate" type="application/atom+xml" href="/feeds/all.atom.xml" class="mg-feed"><i class="uk-icon-rss uk-icon-medium"></i> ATOM</a>
+            </div>
+
+            <div class="uk-panel uk-panel-box">
+                <h3 class="uk-panel-title">Contacts</h3>
+                <a class="mg-icon-link" href="https://github.com/dialelo">
+                    <i class="uk-icon-github uk-icon-medium"></i>
+                </a>
+                <a class="mg-icon-link" href="https://twitter.com/dialelo">
+                    <i class="uk-icon-twitter uk-icon-medium"></i>
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</main>
+
+<footer class="mg-footer">
+    <div class="uk-container uk-container-center uk-text-center">
+
+        <div class="mg-icons-small uk-subnav uk-visible-small">
+            <li><a rel="alternate" type="application/atom+xml" href="/feeds/all.atom.xml" class="uk-icon-button uk-icon-rss"></a></li>
+            <li>
+                <a href="https://github.com/dialelo" class="uk-icon-button uk-icon-github"></a>
+            </li>
+            <li>
+                <a href="https://twitter.com/dialelo" class="uk-icon-button uk-icon-twitter"></a>
+            </li>
+        </div>
+
+        <div class="mg-author uk-panel">
+            <p>
+(ɔ) 2015 Alejandro Gómez. All the content licensed under a
+<a href='http://creativecommons.org/licenses/by/4.0/'>
+Creative Commons Attribution</a> license.<br>
+Code snippets in the pages are released under
+<a href="http://opensource.org/licenses/BSD-2-clause" target="_blank">
+ The simplified BSD License</a>, unless otherwise specified.
+</p>
+
+            <p>Powered by <a href="http://blog.getpelican.com">Pelican</a>.<br class="uk-visible-small"> Theme based on <a href="https://github.com/lucachr/pelican-mg">mg</a> by <a href="https://github.com/lucachr">Luca Chiricozzi</a>.</p>
+        </div>
+    </div>
+</footer>
+
+<div id="mg-offcanvas" class="uk-offcanvas">
+    <div class="uk-offcanvas-bar">
+
+        <form class="uk-search" action="search.html" data-uk-search>
+            <input class="uk-search-field" type="search" name="q" id="tipue_search_input" autocomplete="off" placeholder="Search...">
+        </form>
+
+        <ul class="uk-nav uk-nav-offcanvas" data-uk-nav>
+            <li class="uk-nav-header">Categories</li>
+            <li ><a href="/category/javascript.html">JavaScript</a></li>
+
+            <li class="uk-nav-divider"></li>
+            <li><a href="/">Archives</a></li>
+        </ul>
+    </div>
+</div>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="js/vendor/jquery-1.10.2.min.js"><\/script>')</script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/js/uikit.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/js/components/search.min.js"></script>
+<script src="/theme/js/jquery.sticky-kit.js"></script>
+<script src="/theme/js/tipuesearch_set.js"></script>
+<script src="/theme/js/tipuesearch.js"></script>
+<script src="/theme/js/plugins.js"></script>
+<script src="/theme/js/main.js"></script>
+
+</body>
+</html>
