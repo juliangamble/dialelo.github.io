@@ -15,6 +15,7 @@ ALTNAME = ''
 DESCRIPTION = ''
 SITEURL = 'http://dialelo.github.io'
 FAVICON = 'favicon.ico'
+FAVICON_TYPE = 'image/png'
 
 # Content
 PATH = 'content'
@@ -57,9 +58,9 @@ DEFAULT_DATE = 'fs'
 # Footer
 FOOTER = ("""
 (\u0254) 2015 Alejandro Gómez. All the content licensed under a
-<a href='http://creativecommons.org/licenses/by/4.0/'>
+<a href="http://creativecommons.org/licenses/by/4.0/">
 Creative Commons Attribution</a> license.<br>
 Code snippets in the pages are released under
-<a href=\"http://opensource.org/licenses/BSD-2-clause\" target=\"_blank\">
+<a href="http://opensource.org/licenses/BSD-2-clause" target="_blank">
  The simplified BSD License</a>, unless otherwise specified.
 """)
