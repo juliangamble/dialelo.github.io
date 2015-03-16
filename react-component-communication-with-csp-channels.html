@@ -8,7 +8,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>React component communication with CSP channels</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Further reading ES6 Generators and CSP Taming the Asynchronous Beast with CSP Channels in JavaScript">
+<meta name="description" content="import csp from "js-csp"; import React from "react"; let Channel = csp.chan().constructor; const Slider = React.createClass({ propTypes: { in: React.PropTypes.instanceOf(Channel), out: React.PropTypes.instanceOf(Channel) }, getInitialState(){ return { progress: 0 } }, componentWillMount(){ let mixer = csp.operations.mix(this.props.in); this.setState({ mixer }); csp.go(function*(){ let progress = yield ...">
 <link rel="shortcut icon" href="http://dialelo.github.io/favicon.ico" type="image/png">
 <meta name="author" content="Alejandro Gómez">
 <meta name="copyright" content="Alejandro Gómez">
@@ -22,9 +22,9 @@
 <meta name="twitter:title" content="React component communication with csp channels" />
 <meta name="twitter:url" content="http://dialelo.github.io/react-component-communication-with-csp-channels.html" />
 <meta itemprop="url" content="http://dialelo.github.io/react-component-communication-with-csp-channels.html" />
-<meta property="og:description" content="Further reading ES6 Generators and CSP Taming the Asynchronous Beast with CSP Channels in JavaScript" />
-<meta name="twitter:description" content="Further reading ES6 Generators and CSP Taming the Asynchronous Beast with CSP Channels in JavaScript" />
-<meta property="og:article:published_time" content="2015-03-10" />
+<meta property="og:description" content="import csp from &#34;js-csp&#34;; import React from &#34;react&#34;; let Channel = csp.chan().constructor; const Slider = React.createClass({ propTypes: { in: React.PropTypes.instanceOf(Channel), out: React.PropTypes.instanceOf(Channel) }, getInitialState(){ return { progress: 0 } }, componentWillMount(){ let mixer = csp.operations.mix(this.props.in); this.setState({ mixer }); csp.go(function*(){ let progress = yield ..." />
+<meta name="twitter:description" content="import csp from &#34;js-csp&#34;; import React from &#34;react&#34;; let Channel = csp.chan().constructor; const Slider = React.createClass({ propTypes: { in: React.PropTypes.instanceOf(Channel), out: React.PropTypes.instanceOf(Channel) }, getInitialState(){ return { progress: 0 } }, componentWillMount(){ let mixer = csp.operations.mix(this.props.in); this.setState({ mixer }); csp.go(function*(){ let progress = yield ..." />
+<meta property="og:article:published_time" content="2015-03-11" />
 <meta property="og:article:author" content="Alejandro Gómez" >
 
 <link href="http://dialelo.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="dialelo ATOM Feed"/>
@@ -85,13 +85,61 @@
 
     <article class="uk-article">
         <h1 class="uk-heading-large uk-article-title" itemprop="name">React component communication with CSP channels</h1>
-        <p class="uk-article-meta"><time datetime="2015-03-10" itemprop="datePublished">Tue 10 March 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+        <p class="uk-article-meta"><time datetime="2015-03-11" itemprop="datePublished">Wed 11 March 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
 
         <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/react-component-communication-with-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button uk-visible-small"><i class="uk-icon-facebook-square"></i> Share</a>
         <a href="https://twitter.com/intent/tweet?text=React%20component%20communication%20with%20CSP%20channels&url=http://dialelo.github.io/react-component-communication-with-csp-channels.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button uk-visible-small" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
         <a href="https://plus.google.com/share?url=http://dialelo.github.io/react-component-communication-with-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button uk-visible-small"><i class="uk-icon-google-plus-square"></i> Share</a>
 
-        <section itemprop="articleBody"><h3>Further reading</h3>
+        <section itemprop="articleBody"><section id="slider"></section>
+
+<script type="text/javascript" src="/js/react-csp.js"></script>
+
+<div class="highlight"><pre><span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">React</span> <span class="nx">from</span> <span class="s2">&quot;react&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">Channel</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">().</span><span class="nx">constructor</span><span class="p">;</span>
+
+<span class="kr">const</span> <span class="nx">Slider</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">propTypes</span><span class="o">:</span> <span class="p">{</span>
+        <span class="k">in</span><span class="o">:</span> <span class="nx">React</span><span class="p">.</span><span class="nx">PropTypes</span><span class="p">.</span><span class="nx">instanceOf</span><span class="p">(</span><span class="nx">Channel</span><span class="p">),</span>
+        <span class="nx">out</span><span class="o">:</span> <span class="nx">React</span><span class="p">.</span><span class="nx">PropTypes</span><span class="p">.</span><span class="nx">instanceOf</span><span class="p">(</span><span class="nx">Channel</span><span class="p">)</span>
+    <span class="p">},</span>
+
+    <span class="nx">getInitialState</span><span class="p">(){</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="nx">progress</span><span class="o">:</span> <span class="mi">0</span> <span class="p">}</span>
+    <span class="p">},</span>
+
+    <span class="nx">componentWillMount</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">mixer</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">operations</span><span class="p">.</span><span class="nx">mix</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="k">in</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">setState</span><span class="p">({</span> <span class="nx">mixer</span> <span class="p">});</span>
+
+        <span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+            <span class="kd">let</span> <span class="nx">progress</span> <span class="o">=</span> <span class="k">yield</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="k">in</span><span class="p">;</span>
+            <span class="k">while</span> <span class="p">(</span><span class="nx">progress</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">){</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">setState</span><span class="p">({</span> <span class="nx">progress</span> <span class="p">});</span>
+                <span class="nx">progress</span> <span class="o">=</span> <span class="k">yield</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="k">in</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}.</span><span class="nx">bind</span><span class="p">(</span><span class="k">this</span><span class="p">))</span>
+    <span class="p">},</span>
+
+    <span class="nx">componentWillUnmount</span><span class="p">(){</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="k">in</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">out</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+    <span class="p">},</span>
+
+    <span class="nx">render</span><span class="p">(){</span>
+        <span class="k">return</span> <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">type</span><span class="o">=</span><span class="s2">&quot;range&quot;</span> <span class="nx">min</span><span class="o">=</span><span class="s2">&quot;0&quot;</span> <span class="nx">max</span><span class="o">=</span><span class="s2">&quot;100&quot;</span> <span class="nx">step</span><span class="o">=</span><span class="s2">&quot;1&quot;</span> <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">progress</span> <span class="o">*</span> <span class="mi">100</span><span class="p">}</span> <span class="o">/&gt;</span>
+    <span class="p">},</span>
+
+    <span class="nx">shouldComponentUpdate</span><span class="p">(</span><span class="nx">nextProps</span><span class="p">,</span> <span class="nx">nextState</span><span class="p">){</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">progress</span> <span class="o">!==</span> <span class="nx">nextState</span><span class="p">.</span><span class="nx">progress</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<h3>Further reading</h3>
 <ul>
 <li><a href="http://swannodette.github.io/2013/08/24/es6-generators-and-csp/">ES6 Generators and CSP</a></li>
 <li><a href="http://jlongster.com/Taming-the-Asynchronous-Beast-with-CSP-in-JavaScript">Taming the Asynchronous Beast with CSP Channels in JavaScript</a></li>
