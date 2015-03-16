@@ -1,6 +1,5 @@
 Title: Introduction to Communicating Sequential Processes in JavaScript
 Category: JavaScript
-Status: Draft
 
 The JavaScript programming language features a rich set of techniques
 for dealing with asynchronous computation. Raw [Continuation Passing Style (CPS) ](http://en.wikipedia.org/wiki/Continuation-passing_style)
@@ -14,7 +13,7 @@ have popularized modern incarnations of [Tony Hoare's](http://es.wikipedia.org/w
 [Communicating Sequential Processes (CSP)](http://en.wikipedia.org/wiki/Communicating_sequential_processes), which is a great substrate for representing
 async computations and is backed by mathematical formalism. This article is intended as an introduction to CSP using the [js-csp](https://github.com/ubolonton/js-csp)
 library, which is a straight port of the fantastic Clojure(Script) [core.async](https://github.com/). We'll
-explore the aforementioned alternatives and talk about their strengths and weaknesses to then
+explore the aforementioned alternatives and talk about their strengths and weaknesses. After that we'll
 delve into the building blocks of CSP: channels and processes; and show some examples of what you can do with such
 primitives.
 
@@ -22,7 +21,7 @@ primitives.
 
 The most common way of doing asynchronous computation in JavaScript has traditionally been continuation passing
 style, using callbacks for continuing async calls. This approach is prevalent in many of the APIs we use as JavaScript
-programmers, we can find examples in the browser, node, and many existing libraries. The error handling is done either
+programmers, we can find examples in the browser, node and many existing libraries. The error handling is done either
 accepting an error argument in the continuation or providing **two** continuations, one for succesful results and another for errors.
 
 For a contrived example, let's assume that we have to make two calls to asynchronous functions, one called `getUserToken`
@@ -70,8 +69,8 @@ getUserToken(username, password)
 ```
 
 Promises obscure our logic too since we have to scatter a logical piece of functionality in multiple unrelated small functions.
-On top of that, the `then` method complects `map`ping a transforming function over the value contained in a Promise with sequencing (`flatMap`)
-computations that return promises.
+On top of that, the `then` method [complects](http://en.wiktionary.org/wiki/complect) `map`ping a transforming function over the
+value contained in a Promise with sequencing (`flatMap`) computations that return promises.
 
 ### async/await
 
@@ -101,7 +100,7 @@ In my opinion this is much more clear and, as mentioned before, we can use it to
 
 This is an unfair comparison since reactive streams represent a continuum of observable values instead of an
 asynchronous computation with a single value like promises. Streams are a great abstraction and you can manipulate
-them using a myriad of combinators, I recommend you to take a look at them. I'll be using Bacon.js for converting
+them using a myriad of combinators, I recommend you to take a look at them. I'll be using [Bacon.js](https://baconjs.github.io/) for converting
 our CPS functions into streams:
 
 ```javascript
@@ -151,7 +150,7 @@ the abstractions that CSP gives us for asynchronous computation to understand th
 
 ## Channels
 
-Channels are first-class queue-like objects, multiple readers and writers can either take or put one value at
+Channels are first class queue-like objects, multiple readers and writers can either take or put one value at
 a time on them. Their responsability is twofold: conveyance of values and synchronization. They decouple producers
 of values from consumers and are the message-passing primitive of CSP. Channels are unbuffered by default but we can
 create channels with different buffers, each with its own synchronization semantics.
