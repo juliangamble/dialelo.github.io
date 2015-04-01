@@ -68,295 +68,445 @@
 
 
             <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
-                <a href="http://dialelo.github.io/introduction-to-communicating-sequential-processes-in-javascript.html" class="uk-article-title uk-link-muted" itemprop="name">Introduction to Communicating Sequential Processes in JavaScript</a>
-                <p class="uk-article-meta"><time datetime="2015-03-16" itemprop="datePublished">Mon 16 March 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+                <a href="http://dialelo.github.io/application-architecture-with-react-rethinking-flux.html" class="uk-article-title uk-link-muted" itemprop="name">Application Architecture with React: rethinking Flux</a>
+                <p class="uk-article-meta"><time datetime="2015-04-01" itemprop="datePublished">Wed 01 April 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
 </p>
-                <p class="uk-article-lead" itemprop="description">The JavaScript programming language features a rich set of techniques for dealing with asynchronous computation. Raw Continuation Passing Style (CPS) with callbacks, promises and Functional Reactive Programming are commonplace in today's JS. EcmaScript 7 will bring syntantic sugar on top of promises with async and await and you can ...</p>
-                <section itemprop="articleBody"><p>The JavaScript programming language features a rich set of techniques
-for dealing with asynchronous computation. Raw <a href="http://en.wikipedia.org/wiki/Continuation-passing_style">Continuation Passing Style (CPS) </a>
-with callbacks, <a href="http://en.wikipedia.org/wiki/Futures_and_promises">promises</a> and
-<a href="http://en.wikipedia.org/wiki/Functional_reactive_programming">Functional Reactive Programming</a> are commonplace in today's JS.
-EcmaScript 7 will bring syntantic sugar on top of promises with <code>async</code> and <code>await</code> and you can use that today with
-<a href="http://babeljs.io/">Babel</a>.</p>
-<p>However, the <a href="https://golang.org/">Go</a> and <a href="https://github.com/clojure/clojurescript">Clojure(Script)</a> programming languages
-have popularized modern incarnations of <a href="http://es.wikipedia.org/wiki/C._A._R._Hoare">Tony Hoare's</a>
-<a href="http://en.wikipedia.org/wiki/Communicating_sequential_processes">Communicating Sequential Processes (CSP)</a>, which is a great substrate for representing
-async computations and is backed by mathematical formalism. This article is intended as an introduction to CSP using the <a href="https://github.com/ubolonton/js-csp">js-csp</a>
-library, which is a straight port of the fantastic Clojure(Script) <a href="https://github.com/">core.async</a>. We'll
-explore the aforementioned alternatives and talk about their strengths and weaknesses. After that we'll
-delve into the building blocks of CSP: channels and processes; and show some examples of what you can do with such
-primitives.</p>
-<h2>Continuation Passing Style</h2>
-<p>The most common way of doing asynchronous computation in JavaScript has traditionally been continuation passing
-style, using callbacks for continuing async calls. This approach is prevalent in many of the APIs we use as JavaScript
-programmers, we can find examples in the browser, node and many existing libraries. The error handling is done either
-accepting an error argument in the continuation or providing <strong>two</strong> continuations, one for succesful results and another for errors.</p>
-<p>For a contrived example, let's assume that we have to make two calls to asynchronous functions, one called <code>getUserToken</code>
-for getting a authentication token and another to <code>getUserInfo</code> that needs to be authenticated with the token, we then log
-the user avatar URL to the console. Both functions accept success and error continuation as the last two arguments.</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">getUserToken</span><span class="p">,</span> <span class="nx">getUserInfo</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./user-cps&quot;</span><span class="p">;</span>
+                <p class="uk-article-lead" itemprop="description">People coming to React from other frameworks/libraries tend to ask themselves how to manage application state since React only solves the UI rendering problem, leaving the choice of state management and application architecture to the developer. Facebook suggest an architecture called Flux that fits with the React rendering model ...</p>
+                <section itemprop="articleBody"><p>People coming to <a href="http://facebook.github.io/react/">React</a> from other frameworks/libraries
+tend to ask themselves how to manage application state since React only solves the UI rendering
+problem, leaving the choice of state management and application architecture to the developer.
+Facebook suggest an architecture called <a href="http://facebook.github.io/flux/">Flux</a> that fits
+with the React rendering model.</p>
+<p>In this article I will explore a way to manage state in JavaScript applications using
+React as their UI layer and recast Facebook's Flux conceptual framework using ideas
+from <a href="https://github.com/clojure/clojurescript">ClojureScript</a> libraries like <a href="https://github.com/omcljs/om">Om</a>.</p>
+<h2>Flux</h2>
+<p>Flux's core idea is that <a href="http://facebook.github.io/flux/docs/overview.html#structure-and-data-flow">data should flow in one direction</a>.
+This makes reasoning about applications easier, dependencies between system components are well-defined and all
+state changes come from a "single source of truth", as they put it.</p>
+<p><img alt="" src="http://facebook.github.io/flux/img/flux-simple-f8-diagram-explained-1300w.png" /></p>
+<p>In a nutshell: <a href="http://facebook.github.io/flux/docs/overview.html#views-and-controller-views">Views</a>
+trigger <a href="http://facebook.github.io/flux/docs/overview.html#actions">Actions</a> which are notified to <a href="http://facebook.github.io/flux/docs/overview.html#stores">Stores</a>
+by a <a href="http://facebook.github.io/flux/docs/dispatcher.html#content">Dispatcher</a>.
+Stores respond to actions modifying their state. Since views consume data from Stores and display it,
+Store updates trigger re-renders in the UI when needed.</p>
+<p>There are several things I dislike about Flux, namely:</p>
+<ul>
+<li>It complects state management and the bussiness logic for causing state changes.</li>
+<li>State is scattered through various stores which are apparently modular albeit they end up
+  knowing about each other.</li>
+<li>The stores are coupled with the dispatching mechanism.</li>
+</ul>
+<h2>From Stores to Global immutable state</h2>
+<p>Instead of having multiple stores, I suggest Om's approach of having a global mutable reference
+to an immutable data structure. This way we model our application state as a succesion of immutable
+values, without modifying data in-place or rebinding variables to different values over time.</p>
+<p>This can be easily achieved using my <a href="https://github.com/dialelo/atomo">atomo</a> library and Facebook's
+<a href="https://github.com/facebook/immutable-js">immutable-js</a>.
+The data structure contained in the global atom would be a map, which gives us the ability to
+split data into separate logical domains using keys.</p>
+<p>This approach doesn't try to hide the fact that separate logical domains tend to refer to each other,
+here is a contrived example of the shape of a music application state:</p>
+<div class="highlight"><pre><span class="c1">// state.js</span>
 
-<span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="s2">&quot;Ada Byron&quot;</span><span class="p">,</span>
-    <span class="nx">password</span> <span class="o">=</span> <span class="s2">&quot;I invented programming&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">fromJS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
 
-<span class="kd">let</span> <span class="nx">onError</span> <span class="o">=</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">);</span>
-
-<span class="nx">getUserToken</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">,</span> <span class="p">(</span><span class="nx">token</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
-    <span class="nx">getUserInfo</span><span class="p">(</span><span class="nx">token</span><span class="p">,</span> <span class="p">(</span><span class="nx">userInfo</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">userInfo</span><span class="p">[</span><span class="s1">&#39;avatar&#39;</span><span class="p">]);</span>
-    <span class="p">},</span> <span class="nx">onError</span><span class="p">);</span>
-<span class="p">},</span> <span class="nx">onError</span><span class="p">);</span>
+<span class="kd">let</span> <span class="nx">initialState</span> <span class="o">=</span> <span class="nx">fromJS</span><span class="p">({</span>
+    <span class="nx">user</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nx">albums</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nx">title</span><span class="o">:</span> <span class="s2">&quot;La Leyenda del Tiempo&quot;</span><span class="p">,</span>
+            <span class="nx">artist</span><span class="o">:</span> <span class="s2">&quot;Camarón&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nx">title</span><span class="o">:</span> <span class="s2">&quot;Veneno&quot;</span><span class="p">,</span>
+            <span class="nx">artist</span><span class="o">:</span> <span class="s2">&quot;Veneno&quot;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nx">playlists</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nx">name</span><span class="o">:</span> <span class="s2">&quot;Flamenco&quot;</span><span class="p">,</span>
+            <span class="nx">tracks</span><span class="o">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="nx">title</span><span class="o">:</span> <span class="s2">&quot;Nana del Caballo Grande&quot;</span><span class="p">,</span>
+                    <span class="nx">artist</span><span class="o">:</span> <span class="s2">&quot;Camarón&quot;</span><span class="p">,</span>
+                    <span class="nx">album</span><span class="o">:</span> <span class="s2">&quot;La Leyenda del Tiempo&quot;</span>
+                <span class="p">}</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">});</span>
 </pre></div>
 
 
-<p>Althoug our logic is very simple the callback machinery obscures it and the effort required to understand what's
-going on is a lot more than it should be. Continuation passing style is very low-level and I think that most people will
-agree that we need better abstractions on top of that. Luckily it's easy to transform functions written in continuation
-passing style to offer a nicer inteface.</p>
-<h2>Promises</h2>
-<p>Promises have slightly improved on CPS offering a first-class notion of asynchronous computations that may fail. There are
-many promise libraries available and since it has become so widespread ES6 is shipping them as part of the standard. If our
-<code>getUserToken</code> and <code>getUserInfo</code> function returned promises, we could transform the above example to this:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">getUserToken</span><span class="p">,</span> <span class="nx">getUserInfo</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./user-promises&quot;</span><span class="p">;</span>
+<p>We can create the global mutable atom very easily from an immutable data structure:</p>
+<div class="highlight"><pre><span class="c1">// state.js</span>
 
-<span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="s2">&quot;Ada Byron&quot;</span><span class="p">,</span>
-    <span class="nx">password</span> <span class="o">=</span> <span class="s2">&quot;I invented programming&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">atomo</span> <span class="nx">from</span> <span class="s2">&quot;atomo&quot;</span><span class="p">;</span>
 
-<span class="nx">getUserToken</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">)</span>
-   <span class="p">.</span><span class="nx">then</span><span class="p">((</span><span class="nx">token</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">getUserInfo</span><span class="p">(</span><span class="nx">token</span><span class="p">))</span>
-   <span class="p">.</span><span class="nx">then</span><span class="p">((</span><span class="nx">userInfo</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">userInfo</span><span class="p">[</span><span class="s1">&#39;avatar&#39;</span><span class="p">]);</span>
-    <span class="p">})</span>
-   <span class="p">.</span><span class="k">catch</span><span class="p">((</span><span class="nx">err</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">));</span>
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">state</span> <span class="o">=</span> <span class="nx">atomo</span><span class="p">.</span><span class="nx">atom</span><span class="p">(</span><span class="nx">initialState</span><span class="p">);</span>
 </pre></div>
 
 
-<p>Promises obscure our logic too since we have to scatter a logical piece of functionality in multiple unrelated small functions.
-On top of that, the <code>then</code> method <a href="http://en.wiktionary.org/wiki/complect">complects</a> <code>map</code>ping a transforming function over the
-value contained in a Promise with sequencing (<code>flatMap</code>) computations that return promises.</p>
-<h3>async/await</h3>
-<p>ES7's <code>async</code> and <code>await</code> keywords let us express asynchronous computations using promises in a much more clear way, solving the
-problem of obscured logic I talked before. We can declare a function as <code>async</code> and "block" for promises using the <code>await</code> keyword:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">getUserToken</span><span class="p">,</span> <span class="nx">getUserInfo</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./user-promises&quot;</span><span class="p">;</span>
+<p>Since atoms are observable and the immutable values they refer to share structure when creating
+a new, modified value out of them, we can serialize the states our application in a memory-efficient
+way:</p>
+<div class="highlight"><pre><span class="c1">// history.js</span>
 
-<span class="nx">async</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
-    <span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="s2">&quot;Ada Byron&quot;</span><span class="p">,</span>
-        <span class="nx">password</span> <span class="o">=</span> <span class="s2">&quot;I invented programming&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">List</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./state&quot;</span><span class="p">;</span>
 
-    <span class="k">try</span> <span class="p">{</span>
-        <span class="kd">let</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">await</span> <span class="nx">getUserToken</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">);</span>
-        <span class="kd">let</span> <span class="nx">userInfo</span> <span class="o">=</span> <span class="nx">await</span> <span class="nx">getUserInfo</span><span class="p">(</span><span class="nx">token</span><span class="p">);</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">userInfo</span><span class="p">[</span><span class="s1">&#39;avatar&#39;</span><span class="p">]);</span>
-    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">);</span>
+<span class="kr">const</span> <span class="nx">history</span> <span class="o">=</span> <span class="nx">atomo</span><span class="p">.</span><span class="nx">atom</span><span class="p">(</span><span class="k">new</span> <span class="nx">List</span><span class="p">());</span>
+
+<span class="nx">state</span><span class="p">.</span><span class="nx">addWatch</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">atom</span><span class="p">,</span> <span class="nx">oldValue</span><span class="p">,</span> <span class="nx">newValue</span><span class="p">){</span>
+    <span class="nx">history</span><span class="p">.</span><span class="nx">swap</span><span class="p">((</span><span class="nx">hs</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">oldValue</span><span class="p">));</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<p>This gives us the ability of time-travelling for free, it's trivial to implement undo/redo functionality
+on top of this state management strategy. If we were to serialize the succession of actions and their payload
+in the system we would be able to replay a user interaction with our application very easily, making regression
+testing as simple as feeding the aforementioned actions to the system and asserting that we end up with a consistent
+state.</p>
+<h3>Cursors</h3>
+<p>We don't want to be passing around all the state to every view. Views usually display a subset of the global state
+so we need the ability to focus on paths inside the global immutable state for making our views modular.</p>
+<p>Om solves this problem with an abstraction called <a href="https://github.com/omcljs/om/wiki/Cursors">Cursor</a>, which
+lets us focus on a path of the global atom and offer the same API as atoms. This allows views to treat the substructure
+as their data source and even modify it with the same operations as the Atom. I wrote a <a href="https://github.com/dialelo/kurtsore">simple
+implementation</a> of this concept for using it with atoms and immutable data.</p>
+<p>We can derive a cursor from an atom or another cursor, allowing us to refine the path they point to:</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nx">kurtsore</span> <span class="nx">from</span> <span class="s2">&quot;kurtsore&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">is</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">cursor</span> <span class="o">=</span> <span class="nx">kurtsore</span><span class="p">.</span><span class="nx">cursor</span><span class="p">(</span><span class="nx">state</span><span class="p">),</span>
+    <span class="nx">albums</span> <span class="o">=</span> <span class="nx">cursor</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;albums&#39;</span><span class="p">),</span>
+    <span class="nx">playlists</span> <span class="o">=</span> <span class="nx">cursor</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;playlists&#39;</span><span class="p">);</span>
+
+<span class="nx">is</span><span class="p">(</span>
+    <span class="nx">albums</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
+    <span class="nx">state</span><span class="p">.</span><span class="nx">deref</span><span class="p">().</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;albums&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+<span class="c1">//=&gt; true</span>
+
+<span class="nx">is</span><span class="p">(</span>
+    <span class="nx">playlists</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
+    <span class="nx">state</span><span class="p">.</span><span class="nx">deref</span><span class="p">().</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;playlists&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+<span class="c1">//=&gt; true</span>
+</pre></div>
+
+
+<h2>Views</h2>
+<p>We can create a cursor without a path for the top-level component, and refine it when passing it to
+sub-components. With this approach we can have modular views that represent a substructure of the global
+immutable state without knowing about the overall state.</p>
+<p>Since cursors save a snapshot of the state they point to when created and immutable data
+equality checks are blazing fast since they are just a reference comparison, they allow us to know
+whether a component should update and implement a very efficient <code>shouldComponentUpdate</code>. You
+can see an example in my <a href="https://github.com/dialelo/react-kurtsore">react-kurtsore</a> library
+and other open source libraries such as <a href="https://github.com/omniscientjs/omniscient">Omniscient</a>.</p>
+<p>Here is an example of a component that displays a sub-component of the global state and passes refined
+cursors to its children:</p>
+<div class="highlight"><pre><span class="c1">// views.js</span>
+
+<span class="kr">import</span> <span class="nx">React</span> <span class="nx">from</span> <span class="s2">&quot;react&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">CursorPropsMixin</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;react-kurtsore&quot;</span><span class="p">;</span>
+
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">Album</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
+
+    <span class="nx">render</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">album</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">album</span><span class="p">.</span><span class="nx">deref</span><span class="p">();</span>
+        <span class="k">return</span> <span class="o">&lt;</span><span class="nx">li</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">album</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;artist&#39;</span><span class="p">)}</span> <span class="o">-</span> <span class="p">{</span><span class="nx">album</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)}</span><span class="o">&lt;</span><span class="err">/li&gt;;</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">Albums</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
+
+    <span class="nx">render</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">albums</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">albums</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span>
+            <span class="nx">cursors</span> <span class="o">=</span> <span class="nx">albums</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">a</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">albums</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="nx">idx</span><span class="p">));</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="o">&lt;</span><span class="nx">ul</span><span class="o">&gt;</span>
+                <span class="p">{</span><span class="nx">cursors</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span>
+                    <span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="o">&lt;</span><span class="nx">Album</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">idx</span><span class="p">}</span> <span class="nx">album</span><span class="o">=</span><span class="p">{</span><span class="nx">a</span><span class="p">}</span> <span class="o">/&gt;</span>
+                <span class="p">)}</span>
+            <span class="o">&lt;</span><span class="err">/ul&gt;</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<h2>Actions</h2>
+<p>As in Flux, actions can be identified with unique and constant values. For this we can use strings
+or ES6 symbols.</p>
+<div class="highlight"><pre><span class="c1">//  constants.js</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">ACTIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">LOG_IN</span><span class="o">:</span> <span class="nx">Symbol</span><span class="p">.</span><span class="k">for</span><span class="p">(</span><span class="s2">&quot;user:log-in&quot;</span><span class="p">),</span>
+    <span class="nx">LOG_IN_FAILED</span><span class="o">:</span> <span class="nx">Symbol</span><span class="p">.</span><span class="k">for</span><span class="p">(</span><span class="s2">&quot;user:log-in-failed&quot;</span><span class="p">),</span>
+    <span class="nx">LOG_OUT</span><span class="o">:</span> <span class="nx">Symbol</span><span class="p">.</span><span class="k">for</span><span class="p">(</span><span class="s2">&quot;user:log-out&quot;</span><span class="p">)</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>We represent actions as an immutable record with <code>type</code> and <code>payload</code> attributes,
+where the type is the identifier constant and the payload can be an arbitrary immutable value.</p>
+<div class="highlight"><pre><span class="c1">// actions.js</span>
+
+<span class="kr">import</span> <span class="nx">immutable</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">Action</span> <span class="o">=</span> <span class="nx">immutable</span><span class="p">.</span><span class="nx">Record</span><span class="p">({</span><span class="nx">type</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">payload</span><span class="o">:</span> <span class="kc">null</span><span class="p">});</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">action</span><span class="p">(</span><span class="nx">type</span><span class="p">,</span> <span class="nx">payload</span><span class="p">){</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nx">Action</span><span class="p">({</span><span class="nx">type</span><span class="p">,</span> <span class="nx">payload</span><span class="p">});</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<h3>Getting rid of the dispatcher</h3>
+<p>Flux proposes the singleton Dispatcher coupled to stores for triggering state transitions. This introduces
+dependencies between stores, making them know about each other and the order the actions must be processed
+by each store. Dispatchers are also different from a pub-sub mechanism in that they fan-out every action
+that is triggered on them to all the stores.</p>
+<p>I instead suggest using <a href="http://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP</a> channels for
+the actions pub-sub mechanism, which you get with the <a href="https://github.com/ubolonton/js-csp">js-csp</a> library.</p>
+<p>The pub-sub system has a channel in which actions are published, and we can derive a publication from it. The
+publication takes the source channel and a function that extracts the "topic" of the messages put into the
+source channel. For ease of testing we can make the source channel configurable using an atom:</p>
+<div class="highlight"><pre><span class="c1">// pubsub.js</span>
+
+<span class="kr">import</span> <span class="nx">atomo</span> <span class="nx">from</span> <span class="s2">&quot;atomo&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+
+<span class="kr">export</span> <span class="kr">const</span> <span class="nx">source</span> <span class="o">=</span> <span class="nx">atomo</span><span class="p">.</span><span class="nx">atom</span><span class="p">(</span><span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">());</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">publication</span><span class="p">(</span><span class="nx">topicFn</span><span class="p">){</span>
+    <span class="k">return</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">operations</span><span class="p">.</span><span class="nx">pub</span><span class="p">.</span><span class="nx">publication</span><span class="p">(</span><span class="nx">source</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span> <span class="nx">topicFn</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">publish</span><span class="p">(</span><span class="nx">msg</span><span class="p">){</span>
+    <span class="nx">csp</span><span class="p">.</span><span class="nx">putAsync</span><span class="p">(</span><span class="nx">source</span><span class="p">.</span><span class="nx">deref</span><span class="p">(),</span> <span class="nx">msg</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>The publication allows other components of the system to subscribe to a topic, providing a channel where the
+values that share the given topic will be put. We can subscribe to actions with the approach shown below:</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">pubsub</span> <span class="nx">from</span> <span class="s2">&quot;./pubsub&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">ACTIONS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./constants&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">userChan</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">(),</span>
+    <span class="nx">pub</span> <span class="o">=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publication</span><span class="p">((</span><span class="nx">v</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">v</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">));</span>
+
+<span class="nx">pub</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">,</span> <span class="nx">userChan</span><span class="p">);</span>
+<span class="nx">pub</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_OUT</span><span class="p">,</span> <span class="nx">userChan</span><span class="p">);</span>
+
+<span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+    <span class="kd">let</span> <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">userChan</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="nx">action</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">let</span> <span class="p">{</span><span class="nx">type</span><span class="p">}</span> <span class="o">=</span> <span class="nx">action</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">let</span> <span class="nx">user</span> <span class="o">=</span> <span class="nx">action</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;payload&quot;</span><span class="p">);</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="s2">&quot; just logged in.&quot;</span><span class="p">)</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;The user just logged out.&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">userChan</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+
+<p>The <code>userChan</code> above is channel that will receive log-in and log-out actions published to the system;
+the generator passed to <code>go</code> will run indefinitely, listening for the actions that <code>userChan</code> receives
+and logging those events to the console. Note that the generator passed to <code>go</code> will only resume when
+<code>userChan</code> has values available, so it's safe to use a while loop inside it.</p>
+<h3>Publishing actions</h3>
+<p>Since some actions may require asynchronous computations to get the data they need and for the sake of
+decoupling views from the actions and the dispatch machinery, we encapsulate action
+triggering in high-level APIs that the views can consume. Flux calls this high-level APIs action creators.</p>
+<p>I suggest to encapsulate every action publication in one of these functions instead of publishing
+actions from the views themselves because it decouples views from the system's communication machinery.
+We also gain the benefit of testing views in isolation since we can interact with them and make sure they
+consume our high-level APIs in the way they are supposed to.</p>
+<div class="highlight"><pre><span class="c1">// authentication.js</span>
+
+<span class="kr">import</span> <span class="p">{</span><span class="nx">ACTIONS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./constants&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">action</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./actions&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">pubsub</span> <span class="nx">from</span> <span class="s2">&quot;./pubsub&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">http</span> <span class="nx">from</span> <span class="s2">&quot;./http&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">fromJS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;immutable&quot;</span><span class="p">;</span>
+
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">tryLogIn</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">){</span>
+    <span class="nx">http</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s2">&quot;/login&quot;</span><span class="p">,</span> <span class="p">{</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">})</span>
+        <span class="p">.</span><span class="nx">then</span><span class="p">((</span><span class="nx">user</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="nx">action</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">,</span> <span class="nx">fromJS</span><span class="p">(</span><span class="nx">user</span><span class="p">))))</span>
+        <span class="p">.</span><span class="k">catch</span><span class="p">((</span><span class="nx">errors</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="nx">action</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN_FAILED</span><span class="p">,</span> <span class="nx">fromJS</span><span class="p">(</span><span class="nx">errors</span><span class="p">))))</span>
+<span class="p">};</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">logout</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">){</span>
+    <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="nx">action</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_OUT</span><span class="p">));</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<h3>Interpreting actions</h3>
+<p>Having a pub-sub mechanism in place allows us to encapsulate state transitions
+into small pieces. These can listen for specific actions (or combinations of actions) on the
+pub-sub and affect the state accordingly, isolating bussines logic into modular and testable units I
+call <em>effects</em>.</p>
+<div class="highlight"><pre><span class="c1">// effects.js</span>
+
+<span class="kr">import</span> <span class="nx">csp</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">ACTIONS</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./constants&quot;</span><span class="p">;</span>
+
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">logIn</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">){</span>
+    <span class="kd">let</span> <span class="nx">loginChan</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">();</span>
+
+    <span class="nx">publication</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_IN</span><span class="p">,</span> <span class="nx">loginChan</span><span class="p">);</span>
+
+    <span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">loginChan</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="nx">action</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">let</span> <span class="nx">user</span> <span class="o">=</span> <span class="nx">action</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;payload&quot;</span><span class="p">);</span>
+            <span class="nx">state</span><span class="p">.</span><span class="nx">swap</span><span class="p">((</span><span class="nx">st</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">st</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="nx">user</span><span class="p">))</span>
+            <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">loginChan</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">});</span>
+
+    <span class="k">return</span> <span class="nx">loginChan</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="kr">export</span> <span class="kd">function</span> <span class="nx">logOut</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">){</span>
+    <span class="kd">let</span> <span class="nx">logoutChan</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">();</span>
+
+    <span class="nx">publication</span><span class="p">.</span><span class="nx">sub</span><span class="p">(</span><span class="nx">ACTIONS</span><span class="p">.</span><span class="nx">LOG_OUT</span><span class="p">,</span> <span class="nx">logoutChan</span><span class="p">);</span>
+
+    <span class="nx">csp</span><span class="p">.</span><span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">logoutChan</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="nx">action</span> <span class="o">!==</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">CLOSED</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">state</span><span class="p">.</span><span class="nx">swap</span><span class="p">((</span><span class="nx">st</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">st</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">))</span>
+            <span class="nx">action</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">logoutChan</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">});</span>
+
+    <span class="k">return</span> <span class="nx">logoutChan</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<p>We can test <code>logIn</code> and <code>logOut</code> effects in isolation inyecting a publication and an atom.
+Note that the <code>logIn</code> and <code>logOut</code> effects are started when calling them and return the channel they
+listen to, giving us the ability to shut them down closing the channel. If we group together a set of effects we could
+create a stateful object that allowed us to start and stop them at will.</p>
+<div class="highlight"><pre><span class="c1">// effects.js</span>
+
+<span class="kr">class</span> <span class="nx">Effects</span> <span class="p">{</span>
+    <span class="nx">start</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">){</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">chans</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="nx">logIn</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">),</span>
+            <span class="nx">logOut</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">)</span>
+        <span class="p">];</span>
+    <span class="p">},</span>
+    <span class="nx">stop</span><span class="p">(){</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">chans</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">ch</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">ch</span><span class="p">.</span><span class="nx">close</span><span class="p">());</span>
     <span class="p">}</span>
 <span class="p">}</span>
+
+<span class="kr">export</span> <span class="k">default</span> <span class="k">new</span> <span class="nx">Effects</span><span class="p">();</span>
 </pre></div>
 
 
-<p>In my opinion this is much more clear and, as mentioned before, we can use it today with translators such as <a href="http://babeljs.io/">Babel</a>.</p>
-<h2>Reactive streams</h2>
-<p>This is an unfair comparison since reactive streams represent a continuum of observable values instead of an
-asynchronous computation with a single value like promises. Streams are a great abstraction and you can manipulate
-them using a myriad of combinators, I recommend you to take a look at them. I'll be using <a href="https://baconjs.github.io/">Bacon.js</a> for converting
-our CPS functions into streams:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="nx">Bacon</span> <span class="nx">from</span> <span class="s2">&quot;baconjs&quot;</span><span class="p">;</span>
-<span class="kr">import</span> <span class="p">{</span><span class="nx">getUserToken</span><span class="p">,</span> <span class="nx">getUserInfo</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./user-cps&quot;</span><span class="p">;</span>
+<h2>Putting it all together</h2>
+<p>With all of the above, here is an example of how the entry point of an application could
+look like:</p>
+<div class="highlight"><pre><span class="c1">// main.js</span>
 
-<span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="s2">&quot;Ada Byron&quot;</span><span class="p">,</span>
-    <span class="nx">password</span> <span class="o">=</span> <span class="s2">&quot;I invented programming&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">React</span> <span class="nx">from</span> <span class="s2">&quot;react&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">CursorPropsMixin</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;react-kurtsore&quot;</span><span class="p">;</span>
 
-<span class="nx">Bacon</span><span class="p">.</span><span class="nx">fromCallback</span><span class="p">(</span><span class="nx">getUserToken</span><span class="p">,</span> <span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">)</span>
-     <span class="p">.</span><span class="nx">flatMap</span><span class="p">((</span><span class="nx">token</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">Bacon</span><span class="p">.</span><span class="nx">fromCallback</span><span class="p">(</span><span class="nx">getUserInfo</span><span class="p">,</span> <span class="nx">token</span><span class="p">))</span>
-     <span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">userInfo</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">userInfo</span><span class="p">[</span><span class="s1">&#39;avatar&#39;</span><span class="p">])</span>
-     <span class="p">.</span><span class="nx">log</span><span class="p">()</span>
-     <span class="p">.</span><span class="nx">onError</span><span class="p">((</span><span class="nx">err</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">))</span>
-</pre></div>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./state&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="p">{</span><span class="nx">Albums</span><span class="p">,</span> <span class="nx">Playlists</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./views&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">pubsub</span> <span class="s2">&quot;./pubsub&quot;</span><span class="p">;</span>
+<span class="kr">import</span> <span class="nx">effects</span> <span class="nx">from</span> <span class="s2">&quot;./effects&quot;</span><span class="p">;</span>
 
+<span class="kr">const</span> <span class="nx">App</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">createClass</span><span class="p">({</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span> <span class="nx">CursorPropsMixin</span> <span class="p">],</span>
 
-<p>Streams still scatter our logic but they separate value transformation (<code>map</code>) from sequencing (<code>flatMap</code>), although
-it may depend on the implementation you are using.</p>
-<h2>CSP</h2>
-<p>I'll go into detail about CSP below but before that let's revisit our example. <code>async</code> and <code>await</code> are designed with
-promises in mind but we can get a similar syntactic abstraction using generators. Now our <code>getUserToken</code> and <code>getUserInfo</code>
-functions will return channels, and they will put the value computed asynchronously in the channels they return:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">go</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
-<span class="kr">import</span> <span class="p">{</span><span class="nx">getUserToken</span><span class="p">,</span> <span class="nx">getUserInfo</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;./user-csp&quot;</span><span class="p">;</span>
+    <span class="nx">render</span><span class="p">(){</span>
+        <span class="kd">let</span> <span class="nx">state</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">props</span><span class="p">.</span><span class="nx">state</span><span class="p">;</span>
 
-
-<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
-    <span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="s2">&quot;Ada Byron&quot;</span><span class="p">,</span>
-        <span class="nx">password</span> <span class="o">=</span> <span class="s2">&quot;I invented programming&quot;</span><span class="p">;</span>
-
-    <span class="k">try</span> <span class="p">{</span>
-        <span class="kd">let</span> <span class="nx">token</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">getUserToken</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">);</span>
-        <span class="kd">let</span> <span class="nx">userInfo</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">getUserInfo</span><span class="p">(</span><span class="nx">token</span><span class="p">);</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">userInfo</span><span class="p">[</span><span class="s1">&#39;avatar&#39;</span><span class="p">]);</span>
-    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">});</span>
-</pre></div>
-
-
-<p>As you can see, it's fairly similar to the example of promises with <code>async</code> and <code>await</code>. Let's dive into
-the abstractions that CSP gives us for asynchronous computation to understand the above example better.</p>
-<h2>Channels</h2>
-<p>Channels are first class queue-like objects, multiple readers and writers can either take or put one value at
-a time on them. Their responsability is twofold: conveyance of values and synchronization. They decouple producers
-of values from consumers and are the message-passing primitive of CSP. Channels are unbuffered by default but we can
-create channels with different buffers, each with its own synchronization semantics.</p>
-<p>Let's explore channels and their operations:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">chan</span><span class="p">,</span> <span class="nx">putAsync</span><span class="p">,</span> <span class="nx">takeAsync</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
-
-<span class="kd">let</span> <span class="nx">ch</span> <span class="o">=</span> <span class="nx">chan</span><span class="p">();</span>
-
-<span class="nx">takeAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Got &quot;</span><span class="p">,</span> <span class="nx">value</span><span class="p">));</span>
-
-<span class="c1">// `ch` now has a pending take, let&#39;s try putting a value in it</span>
-<span class="nx">putAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="mi">42</span><span class="p">);</span>
-<span class="c1">//=&gt; &quot;Got 42&quot;</span>
-</pre></div>
-
-
-<p>Puts and takes can happen in any order:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">chan</span><span class="p">,</span> <span class="nx">putAsync</span><span class="p">,</span> <span class="nx">takeAsync</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
-
-<span class="kd">let</span> <span class="nx">ch</span> <span class="o">=</span> <span class="nx">csp</span><span class="p">.</span><span class="nx">chan</span><span class="p">();</span>
-
-<span class="c1">// Async puts accept a callback too</span>
-<span class="nx">putAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="mi">42</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Just put 42&quot;</span><span class="p">));</span>
-<span class="nx">putAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="mi">43</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;One more&quot;</span><span class="p">));</span>
-
-<span class="nx">takeAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Got &quot;</span><span class="p">,</span> <span class="nx">value</span><span class="p">))</span>
-<span class="c1">//=&gt; &quot;Got 42&quot;</span>
-<span class="c1">//=&gt; &quot;Just put 42&quot;</span>
-<span class="nx">takeAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Got &quot;</span><span class="p">,</span> <span class="nx">value</span><span class="p">))</span>
-<span class="c1">//=&gt; &quot;Got 43&quot;</span>
-<span class="c1">//=&gt; &quot;One more&quot;</span>
-</pre></div>
-
-
-<p>Channels can be closed and after closing them the pending puts will fail, whereas pending takes will receive a special value
-which signals that the channel is closed. Currently in js-csp such value is <code>null</code> so it's not allowed to put <code>null</code>
-into a channel.</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">chan</span><span class="p">,</span> <span class="nx">takeAsync</span><span class="p">,</span> <span class="nx">putAsync</span><span class="p">,</span> <span class="nx">CLOSED</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
-
-<span class="kd">let</span> <span class="nx">ch</span> <span class="o">=</span> <span class="nx">chan</span><span class="p">();</span>
-
-<span class="nx">takeAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Channel closed? &quot;</span><span class="p">,</span> <span class="nx">value</span> <span class="o">===</span> <span class="nx">CLOSED</span><span class="p">));</span>
-
-<span class="nx">putAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="mi">42</span><span class="p">);</span>
-<span class="c1">//=&gt; &quot;Channel closed? false&quot;</span>
-
-<span class="nx">takeAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Channel closed? &quot;</span><span class="p">,</span> <span class="nx">value</span> <span class="o">===</span> <span class="nx">CLOSED</span><span class="p">));</span>
-<span class="nx">takeAsync</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Channel closed? &quot;</span><span class="p">,</span> <span class="nx">value</span> <span class="o">===</span> <span class="nx">CLOSED</span><span class="p">));</span>
-
-<span class="nx">ch</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
-<span class="c1">//=&gt; &quot;Channel closed? true&quot;</span>
-<span class="c1">//=&gt; &quot;Channel closed? true&quot;</span>
-</pre></div>
-
-
-<h2>Processes</h2>
-<p>The generator that we gave to the <code>go</code> function in the example above is a <strong>process</strong>, a piece of logic that uses
-channels for communication and synchronization. Puts and takes on a process will "block" until the operation
-completes, that's why we have to use <code>yield</code> when calling them. If we <code>yield</code> a channel an implicit take is performed.</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">go</span><span class="p">,</span> <span class="nx">chan</span><span class="p">,</span> <span class="nx">put</span><span class="p">,</span> <span class="nx">take</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
-
-<span class="kd">let</span> <span class="nx">ch</span> <span class="o">=</span> <span class="nx">chan</span><span class="p">();</span>
-
-<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[a] Starting a goroutine&quot;</span><span class="p">);</span>
-    <span class="kd">let</span> <span class="nx">value</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">take</span><span class="p">(</span><span class="nx">ch</span><span class="p">);</span> <span class="c1">// equivalent to &#39;yield ch&#39;</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[a] Got &quot;</span><span class="p">,</span> <span class="nx">value</span><span class="p">);</span>
-<span class="p">});</span>
-
-<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[b] Starting another goroutine&quot;</span><span class="p">);</span>
-    <span class="k">yield</span> <span class="nx">put</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="mi">42</span><span class="p">);</span>
-<span class="p">});</span>
-
-<span class="c1">//=&gt; &quot;[a] Starting a goroutine&quot;</span>
-<span class="c1">//=&gt; &quot;[b] Starting another goroutine&quot;</span>
-<span class="c1">//=&gt; &quot;[a] Got 42&quot;</span>
-</pre></div>
-
-
-<p>As we can see in the example above goroutines are a form of cooperative multitasking, they use channels for communication
-and channel operations for context switching. We can create thousands of these lightweight processes in our programs and coordinate via channels.</p>
-<h3>Choice</h3>
-<p>A cool thing about channels is that, given multiple channel operations, we can perform a non-determinismic choice between those
-operations. In the Go programming language such construct is called <code>select</code>, probably after POSIX's <a href="http://linux.die.net/man/2/select">select</a>
-system call, and in <code>js-csp</code> is a function called <code>alts</code>. An important thing to note is that <strong>only one</strong> of the operations given to
-<code>alts</code> will suceed and in case multiple operations are ready to be performed when calling it the successful operation will be
-chosen pseudo-randomly by default.</p>
-<p>Combined with <code>js-csp</code>'s <code>timeout</code> function, which returns a channel that won't receive any value and close after the
-given amount of milliseconds, we can execute operations on a channel given they can be performed fast enough:</p>
-<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">chan</span><span class="p">,</span> <span class="nx">go</span><span class="p">,</span> <span class="nx">timeout</span><span class="p">,</span> <span class="nx">put</span><span class="p">,</span> <span class="nx">alts</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
-
-<span class="kd">let</span> <span class="nx">ch</span> <span class="o">=</span> <span class="nx">chan</span><span class="p">();</span>
-
-<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[a] Gonna sleep for a second&quot;</span><span class="p">);</span>
-    <span class="k">yield</span> <span class="nx">timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[a] Now I&#39;m ready to put a value&quot;</span><span class="p">);</span>
-    <span class="k">yield</span> <span class="nx">put</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="mi">42</span><span class="p">);</span>
-<span class="p">});</span>
-
-<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
-    <span class="kd">let</span> <span class="nx">cancel</span> <span class="o">=</span> <span class="nx">timeout</span><span class="p">(</span><span class="mi">300</span><span class="p">);</span>
-
-    <span class="c1">// `alts` returns an object with the channel on which the operation has been</span>
-    <span class="c1">// performed and its result</span>
-    <span class="kd">let</span> <span class="p">{</span><span class="nx">channel</span><span class="p">,</span> <span class="nx">result</span><span class="p">}</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">alts</span><span class="p">([</span><span class="nx">ch</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">]);</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="nx">channel</span> <span class="o">===</span> <span class="nx">cancel</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[b] Too slow, take was cancelled&quot;</span><span class="p">);</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;[b] Got &quot;</span><span class="p">,</span> <span class="nx">result</span><span class="p">);</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+                <span class="o">&lt;</span><span class="nx">Albums</span> <span class="nx">state</span><span class="o">=</span><span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;albums&#39;</span><span class="p">)}</span> <span class="o">/&gt;</span>
+                <span class="o">&lt;</span><span class="nx">Playlists</span> <span class="nx">state</span><span class="o">=</span><span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">derive</span><span class="p">(</span><span class="s1">&#39;playlists&#39;</span><span class="p">)}</span> <span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="err">/div&gt;</span>
+        <span class="p">);</span>
     <span class="p">}</span>
 <span class="p">});</span>
 
-<span class="c1">//=&gt; &quot;[a] Gonna sleep for a second&quot;</span>
-<span class="c1">//=&gt; &quot;[a] Now I&#39;m ready to put a value&quot;</span>
-<span class="c1">//=&gt; &quot;[b] Too slow, take was cancelled&quot;</span>
+<span class="kd">function</span> <span class="nx">render</span><span class="p">(</span><span class="nx">state</span><span class="p">){</span>
+    <span class="nx">React</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="o">&lt;</span><span class="nx">App</span> <span class="nx">state</span><span class="o">=</span><span class="p">{</span><span class="nx">state</span><span class="p">}</span> <span class="o">/&gt;</span><span class="p">,</span> <span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">));</span>
+<span class="p">};</span>
+
+<span class="p">(</span><span class="kd">function</span> <span class="nx">bootstrap</span><span class="p">(){</span>
+    <span class="c1">// View</span>
+    <span class="nx">render</span><span class="p">(</span><span class="nx">kurtsore</span><span class="p">.</span><span class="nx">cursor</span><span class="p">(</span><span class="nx">state</span><span class="p">));</span>
+    <span class="nx">state</span><span class="p">.</span><span class="nx">addWatch</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">render</span><span class="p">(</span><span class="nx">kurtsore</span><span class="p">.</span><span class="nx">cursor</span><span class="p">(</span><span class="nx">state</span><span class="p">)));</span>
+
+    <span class="c1">// Pub-sub</span>
+    <span class="kd">let</span> <span class="nx">publication</span> <span class="o">=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nx">publication</span><span class="p">((</span><span class="nx">ac</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">ac</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">));</span>
+
+    <span class="c1">// Effects</span>
+    <span class="nx">effects</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">publication</span><span class="p">,</span> <span class="nx">state</span><span class="p">);</span>
+<span class="p">})();</span>
 </pre></div>
 
 
-<h2>Conclusion</h2>
-<p>We barely scratched the surface of what you can do with CSP in this article but I hope this introduction has served to
-get you excited about it. I plan to write more on the topic, there are many things that I didn't cover for the sake of
-brevity. I'm not claiming that CSP is superior to promises or reactive streams or that you should prefer it over them,
-it's about knowing the abstractions you can use for expressing asynchronous computations and choosing the one that fits
-the problem better and yields a simpler solution.</p>
-<p>In future articles I plan to cover more topics related to CSP in JavaScript, which will include:</p>
+<h3>Further reading</h3>
 <ul>
-<li>Buffering strategies</li>
-<li>Using transducers with channels</li>
-<li>High-level patterns on top of CSP</li>
-<li>UI component decoupling with channels</li>
-<li>CSP-flavored Functional Reactive Programming</li>
-</ul>
-<h2>Further reading</h2>
-<ul>
-<li><a href="http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html">Taming the Async beast with ES7</a></li>
-<li><a href="http://jlongster.com/Taming-the-Asynchronous-Beast-with-CSP-in-JavaScript">Taming the Async beast with CSP in JavaScript</a></li>
-<li><a href="http://swannodette.github.io/2013/08/23/make-no-promises/">Make no promises</a></li>
-<li><a href="http://swannodette.github.io/2013/08/24/es6-generators-and-csp/">ES6 generators and CSP</a></li>
+<li><a href="http://swannodette.github.io/2013/12/17/the-future-of-javascript-mvcs/">The Future of JavaScript MVC Frameworks</a></li>
+<li><a href="http://swannodette.github.io/2013/12/31/time-travel/">Time Travel</a></li>
+<li><a href="http://swannodette.github.io/2013/08/24/es6-generators-and-csp/">ES6 Generators and CSP</a></li>
+<li><a href="http://jlongster.com/Taming-the-Asynchronous-Beast-with-CSP-in-JavaScript">Taming the Asynchronous Beast with CSP Channels in JavaScript</a></li>
 </ul></section>
-                <a href="http://dialelo.github.io/introduction-to-communicating-sequential-processes-in-javascript.html#disqus_thread"></a>
+                <a href="http://dialelo.github.io/application-architecture-with-react-rethinking-flux.html#disqus_thread"></a>
                 <hr class="uk-article-divider">
             </article>
 
 
         <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
-                <a href="http://dialelo.github.io/application-architecture-with-react-rethinking-flux.html" class="uk-article-title uk-link-muted" itemprop="name">Application Architecture with React: rethinking Flux</a>
-                <p class="uk-article-meta"><time datetime="2015-03-09" itemprop="datePublished">Mon 09 March 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+                <a href="http://dialelo.github.io/buffering-for-csp-channels.html" class="uk-article-title uk-link-muted" itemprop="name">Buffering for CSP channels</a>
+                <p class="uk-article-meta"><time datetime="2015-03-27" itemprop="datePublished">Fri 27 March 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
 </p>
-                <p class="uk-article-lead" itemprop="description">People coming to React from other frameworks/libraries tend to ask themselves how to manage application state since React only solves the UI rendering problem, leaving the choice of state management and application architecture to the developer. Facebook suggest an architecture called Flux that fits with the React rendering model ...</p>
-                <p>People coming to React from other frameworks/libraries tend to ask themselves how to manage application state since React only solves the UI rendering problem, leaving the choice of state management and application architecture to the developer. Facebook suggest an architecture called Flux that fits with the React rendering model. In this article I will explore a way to manage state in JavaScript applications using React as their UI layer and recast Facebook's Flux conceptual framework using ideas from ClojureScript...</p>
-                <a href="http://dialelo.github.io/application-architecture-with-react-rethinking-flux.html">Read More</a>
+                <p class="uk-article-lead" itemprop="description">When creating an unbuffered channel</p>
+                <p>When creating an unbuffered channel...</p>
+                <a href="http://dialelo.github.io/buffering-for-csp-channels.html">Read More</a>
+                <hr class="uk-article-divider">
+        </article>
+
+
+        <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
+                <a href="http://dialelo.github.io/introduction-to-communicating-sequential-processes-in-javascript.html" class="uk-article-title uk-link-muted" itemprop="name">Introduction to Communicating Sequential Processes in JavaScript</a>
+                <p class="uk-article-meta"><time datetime="2015-03-16" itemprop="datePublished">Mon 16 March 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+</p>
+                <p class="uk-article-lead" itemprop="description">The JavaScript programming language features a rich set of techniques for dealing with asynchronous computation. Raw Continuation Passing Style (CPS) with callbacks, promises and Functional Reactive Programming are commonplace in today's JS. EcmaScript 7 will bring syntantic sugar on top of promises with async and await and you can ...</p>
+                <p>The JavaScript programming language features a rich set of techniques for dealing with asynchronous computation. Raw Continuation Passing Style (CPS) with callbacks, promises and Functional Reactive Programming are commonplace in today's JS. EcmaScript 7 will bring syntantic sugar on top of promises with async and await and you can use that today with Babel. However, the Go and Clojure(Script) programming languages have popularized modern incarnations of Tony Hoare's Communicating Sequential Processes (CSP), which is...</p>
+                <a href="http://dialelo.github.io/introduction-to-communicating-sequential-processes-in-javascript.html">Read More</a>
                 <hr class="uk-article-divider">
         </article>
 
