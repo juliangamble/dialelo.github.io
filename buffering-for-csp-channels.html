@@ -8,7 +8,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>Buffering for CSP channels</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="When creating an unbuffered channel">
+<meta name="description" content="In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn't go into detail about that ...">
 <link rel="shortcut icon" href="http://dialelo.github.io/favicon.ico" type="image/png">
 <meta name="author" content="Alejandro Gómez">
 <meta name="copyright" content="Alejandro Gómez">
@@ -22,9 +22,9 @@
 <meta name="twitter:title" content="Buffering for csp channels" />
 <meta name="twitter:url" content="http://dialelo.github.io/buffering-for-csp-channels.html" />
 <meta itemprop="url" content="http://dialelo.github.io/buffering-for-csp-channels.html" />
-<meta property="og:description" content="When creating an unbuffered channel" />
-<meta name="twitter:description" content="When creating an unbuffered channel" />
-<meta property="og:article:published_time" content="2015-03-27" />
+<meta property="og:description" content="In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn&#39;t go into detail about that ..." />
+<meta name="twitter:description" content="In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn&#39;t go into detail about that ..." />
+<meta property="og:article:published_time" content="2015-04-04" />
 <meta property="og:article:author" content="Alejandro Gómez" >
 
 <link href="http://dialelo.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="dialelo ATOM Feed"/>
@@ -85,13 +85,113 @@
 
     <article class="uk-article">
         <h1 class="uk-heading-large uk-article-title" itemprop="name">Buffering for CSP channels</h1>
-        <p class="uk-article-meta"><time datetime="2015-03-27" itemprop="datePublished">Fri 27 March 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+        <p class="uk-article-meta"><time datetime="2015-04-04" itemprop="datePublished">Sat 04 April 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
 
         <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/buffering-for-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button uk-visible-small"><i class="uk-icon-facebook-square"></i> Share</a>
         <a href="https://twitter.com/intent/tweet?text=Buffering%20for%20CSP%20channels&url=http://dialelo.github.io/buffering-for-csp-channels.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button uk-visible-small" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
         <a href="https://plus.google.com/share?url=http://dialelo.github.io/buffering-for-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button uk-visible-small"><i class="uk-icon-google-plus-square"></i> Share</a>
 
-        <section itemprop="articleBody"><p>When creating an unbuffered channel</p></section>
+        <section itemprop="articleBody"><p>In a previous post I wrote an <a href="/introduction-to-communicating-sequential-processes-in-javascript.html">introduction to CSP in JavaScript</a>,
+where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several
+synchronization semantics can be achieved through the use of buffers but we didn't go into detail about that. This post will explore
+the synchronization strategies through buffers in CSP usign the <a href="https://github.com/ubolonton/js-csp">js-csp</a> library.</p>
+<h2>Channel internals</h2>
+<p>In this section we'll understand the internals of a CSP channel as found in core.async or js-csp libraries, and learn about their method
+of operation. This information will help us understand buffering better and make more informed decissions about the buffering strategies
+we choose.</p>
+<p>A channel is an queue-like object where three operations can be performed: put, take and close. Only one value at a time can be put or taken.
+Internally, a channel encapsulates:</p>
+<ul>
+<li>A boolean flag (<code>closed</code>) that indicates whether is closed or not.</li>
+<li>A buffer where the data that is "put" will be stored waiting to be delivered to the takers.</li>
+<li>Two lists for storing the pending put and take operations.</li>
+<li>A transducer for transforming the values that are put into the channel.</li>
+</ul>
+<p>There are also some invariants that a channel must preserve, namely:</p>
+<ul>
+<li>There shouldn't be both pending puts and takes at the same time.</li>
+<li>If the buffer contains any data, a take shouldn't be queued in the pending list.</li>
+<li>If there is room in the buffer, a put shouldn't be queued in the pending list.</li>
+</ul>
+<p>We will forget about the transducer part for now since I will write about that in an upcoming post. Let's learn about how channels work under
+the hood when doing puts and takes.</p>
+<h3>put</h3>
+<p>When performing a put operation in a channel, we can encounter the channel in one of these three states:</p>
+<ol>
+<li>There are pending takes (hence no pending puts nor data in the buffer).</li>
+<li>There is room in the buffer (hence no pending puts nor pending takes).</li>
+<li>There isn't room in the buffer (hence no pending takes but possibly pending puts).</li>
+</ol>
+<p>For each of those states the channel will behave differently, preserving the invariants outlined above.</p>
+<ol>
+<li>If there are pending takes, the put operation will complete immediately and the value will be delivered to the
+   first pending taker.</li>
+<li>If there is room in the buffer, the put operation will also complete immediately and the value will be added to
+   the buffer.</li>
+<li>If there isn't room in the buffer, the put operation will be queued in the list of pending puts.</li>
+</ol>
+<p>The third case is the only one in which the put operation "blocks" because it can't be performed immediately.</p>
+<h3>take</h3>
+<p>When performing a take operation in a channel, we can encounter the channel in one of three states analogous to those
+we described earlier for put operations:</p>
+<ol>
+<li>There are pending puts (hence no pending takes and a full buffer).</li>
+<li>There are no pending puts but there is data in the buffer (hence no pending takes).</li>
+<li>There are pending takes (hence no pending puts and an empty buffer).</li>
+</ol>
+<p>As with puts, for each of those states the channel will behave differently, preserving its invariants.</p>
+<ol>
+<li>
+<p>If the buffer is full, the take operation will complete immediately taking the first value of the buffer. This will
+   cause a pending put (if any) to complete putting its value in the buffer.</p>
+</li>
+<li>
+<p>If there is data in the buffer but no pending puts, the take operation will complete immediately taking the first value
+   of the buffer.</p>
+</li>
+<li>
+<p>If there isn't any data in the buffer, the take operation will be queued in the list of pending takes.</p>
+</li>
+</ol>
+<h2>Buffers</h2>
+<p>As we learned, buffers synchronize put and take operations inside a channel. When creating a channel with <code>js-csp</code>'s <code>chan</code>
+constructor and not providing a buffer, the channel will be unbuffered. This means that put operations won't succeed until
+a take operation comes in and viceversa.</p>
+<p>Here is an example of synchronization with a unbuffered channel:</p>
+<div class="highlight"><pre><span class="kr">import</span> <span class="p">{</span><span class="nx">chan</span><span class="p">,</span> <span class="nx">take</span><span class="p">,</span> <span class="nx">put</span><span class="p">,</span> <span class="nx">go</span><span class="p">,</span> <span class="nx">timeout</span><span class="p">}</span> <span class="nx">from</span> <span class="s2">&quot;js-csp&quot;</span><span class="p">;</span>
+
+<span class="kd">let</span> <span class="nx">unbufferedChan</span> <span class="o">=</span> <span class="nx">chan</span><span class="p">();</span>
+
+<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+    <span class="k">yield</span> <span class="nx">put</span><span class="p">(</span><span class="nx">unbufferedChan</span><span class="p">,</span> <span class="mi">42</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;put completed!&quot;</span><span class="p">);</span>
+    <span class="k">yield</span> <span class="nx">put</span><span class="p">(</span><span class="nx">unbufferedChan</span><span class="p">,</span> <span class="mi">42</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;put completed!&quot;</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="nx">go</span><span class="p">(</span><span class="kd">function</span><span class="o">*</span><span class="p">(){</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;waiting a second&quot;</span><span class="p">);</span>
+    <span class="k">yield</span> <span class="nx">timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+    <span class="k">yield</span> <span class="nx">unbufferedChan</span><span class="p">;</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;take completed!&quot;</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="c1">//=&gt; &quot;waiting a second&quot;</span>
+<span class="c1">//=&gt; &quot;take completed!&quot;</span>
+<span class="c1">//=&gt; &quot;put completed!&quot;</span>
+</pre></div>
+
+
+<p>As we can see from the logged sentences, a put and a take must rendezvous for them to complete.</p>
+<h3>Fixed</h3>
+<h3>Dropping</h3>
+<h3>Sliding</h3>
+<h3>Promise</h3>
+<h2>Reference</h2>
+<ul>
+<li>Rich Hickey's talk about core.async channel internals</li>
+</ul>
+<p>https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/ImplementationDetails.md</p></section>
         <hr class="uk-article-divider">
     </article>
 

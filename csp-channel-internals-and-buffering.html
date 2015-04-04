@@ -1,33 +1,32 @@
-<meta property="og:title" content="dialelo" />
-<meta property="og:type" content="website" />
-<meta property="og:url" content="http://dialelo.github.io" />
-<meta name="twitter:url" content="http://dialelo.github.io" />
-<meta itemprop="name" content="dialelo">
-<meta itemprop="url" content="http://dialelo.github.io">
-
 <!DOCTYPE html>
-<!--[if lt IE 7]>      <html lang="en" class="no-js lt-ie9 lt-ie8 lt-ie7" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <![endif]-->
-<!--[if IE 7]>         <html lang="en" class="no-js lt-ie9 lt-ie8" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <![endif]-->
-<!--[if IE 8]>         <html lang="en" class="no-js lt-ie9" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <![endif]-->
-<!--[if gt IE 8]><!--> <html lang="en" class="no-js" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/Blog"> <!--<![endif]-->
+<!--[if lt IE 7]>      <html lang="en" class="no-js lt-ie9 lt-ie8 lt-ie7" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <![endif]-->
+<!--[if IE 7]>         <html lang="en" class="no-js lt-ie9 lt-ie8" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <![endif]-->
+<!--[if IE 8]>         <html lang="en" class="no-js lt-ie9" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en" class="no-js" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <!--<![endif]-->
 <head>
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Javascript</title>
+<title>CSP channel internals and buffering</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="">
+<meta name="description" content="In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn't go into detail about that ...">
 <link rel="shortcut icon" href="http://dialelo.github.io/favicon.ico" type="image/png">
 <meta name="author" content="Alejandro Gómez">
 <meta name="copyright" content="Alejandro Gómez">
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:site" content="@dialelo" />
 <meta property="og:site_name" content="dialelo" />
-<meta property="og:title" content="dialelo" />
-<meta property="og:type" content="website" />
-<meta property="og:url" content="http://dialelo.github.io" />
-<meta name="twitter:url" content="http://dialelo.github.io" />
-<meta itemprop="name" content="dialelo" />
-<meta itemprop="url" content="http://dialelo.github.io"/>
+
+<meta property="og:title" content="Csp channel internals and buffering" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://dialelo.github.io/csp-channel-internals-and-buffering.html" />
+<meta name="twitter:title" content="Csp channel internals and buffering" />
+<meta name="twitter:url" content="http://dialelo.github.io/csp-channel-internals-and-buffering.html" />
+<meta itemprop="url" content="http://dialelo.github.io/csp-channel-internals-and-buffering.html" />
+<meta property="og:description" content="In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn&#39;t go into detail about that ..." />
+<meta name="twitter:description" content="In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn&#39;t go into detail about that ..." />
+<meta property="og:article:published_time" content="2015-04-04" />
+<meta property="og:article:author" content="Alejandro Gómez" >
+
 <link href="http://dialelo.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="dialelo ATOM Feed"/>
 <link href='//fonts.googleapis.com/css?family=Open+Sans:800italic' rel='stylesheet' type='text/css'>
 <link href='//fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
@@ -64,15 +63,35 @@
 
     <div class="uk-grid" data-uk-grid-margin>
 
-<div class="uk-width-medium-4-5">
+<div class="mg-container-social uk-width-medium-1-10 uk-hidden-small">
 
+    <div class="uk-panel" id="mg-panel-social">
+        <ul class="uk-nav uk-nav-side">
+            <li>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/csp-channel-internals-and-buffering.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button"><i class="uk-icon-facebook-square"></i> Share</a>
+            </li>
+            <li>
+            <a href="https://twitter.com/intent/tweet?text=CSP%20channel%20internals%20and%20buffering&url=http://dialelo.github.io/csp-channel-internals-and-buffering.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
+            </li>
+            <li>
+            <a href="https://plus.google.com/share?url=http://dialelo.github.io/csp-channel-internals-and-buffering.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button"><i class="uk-icon-google-plus-square"></i> Share</a>
+            </li>
+        </ul>
+    </div>
 
-            <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
-                <a href="http://dialelo.github.io/understanding-csp-channels-and-buffers.html" class="uk-article-title uk-link-muted" itemprop="name">Understanding CSP channels and buffers</a>
-                <p class="uk-article-meta"><time datetime="2015-04-04" itemprop="datePublished">Sat 04 April 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
-</p>
-                <p class="uk-article-lead" itemprop="description">In a previous post I wrote an introduction to CSP in JavaScript, where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several synchronization semantics can be achieved through the use of buffers but we didn't go into detail about that ...</p>
-                <section itemprop="articleBody"><p>In a previous post I wrote an <a href="/introduction-to-communicating-sequential-processes-in-javascript.html">introduction to CSP in JavaScript</a>,
+</div>
+
+<div class="uk-width-medium-7-10">
+
+    <article class="uk-article">
+        <h1 class="uk-heading-large uk-article-title" itemprop="name">CSP channel internals and buffering</h1>
+        <p class="uk-article-meta"><time datetime="2015-04-04" itemprop="datePublished">Sat 04 April 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+
+        <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/csp-channel-internals-and-buffering.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button uk-visible-small"><i class="uk-icon-facebook-square"></i> Share</a>
+        <a href="https://twitter.com/intent/tweet?text=CSP%20channel%20internals%20and%20buffering&url=http://dialelo.github.io/csp-channel-internals-and-buffering.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button uk-visible-small" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
+        <a href="https://plus.google.com/share?url=http://dialelo.github.io/csp-channel-internals-and-buffering.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button uk-visible-small"><i class="uk-icon-google-plus-square"></i> Share</a>
+
+        <section itemprop="articleBody"><p>In a previous post I wrote an <a href="/introduction-to-communicating-sequential-processes-in-javascript.html">introduction to CSP in JavaScript</a>,
 where we learned that channels in CSP serve two purposes: conveyance of values and synchronization. I mentioned that several
 synchronization semantics can be achieved through the use of buffers but we didn't go into detail about that. This post will explore
 channel internals and the synchronization strategies through buffers in CSP usign the <a href="https://github.com/ubolonton/js-csp">js-csp</a> library.</p>
@@ -327,31 +346,8 @@ see an example:</p>
 <li>Rich Hickey's <a href="https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/ImplementationDetails.md">talk about <code>core.async</code> channel internals</a></li>
 <li>Timothy Baldridge's video <a href="https://www.youtube.com/watch?v=WSgg-TQLsdw">about <code>core.async</code> channel internals</a></li>
 </ul></section>
-                <a href="http://dialelo.github.io/understanding-csp-channels-and-buffers.html#disqus_thread"></a>
-                <hr class="uk-article-divider">
-            </article>
-
-
-        <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
-                <a href="http://dialelo.github.io/application-architecture-with-react-rethinking-flux.html" class="uk-article-title uk-link-muted" itemprop="name">Application Architecture with React: rethinking Flux</a>
-                <p class="uk-article-meta"><time datetime="2015-04-02" itemprop="datePublished">Thu 02 April 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
-</p>
-                <p class="uk-article-lead" itemprop="description">People coming to React from other frameworks/libraries tend to ask themselves how to manage application state since React only solves the UI rendering problem, leaving the choice of state management and application architecture to the developer. Facebook suggest an architecture called Flux that fits with the React rendering model ...</p>
-                <p>People coming to React from other frameworks/libraries tend to ask themselves how to manage application state since React only solves the UI rendering problem, leaving the choice of state management and application architecture to the developer. Facebook suggest an architecture called Flux that fits with the React rendering model. In this article I will explore a way to manage state in JavaScript applications using React as their UI layer and recast Facebook's Flux conceptual framework using ideas from ClojureScript...</p>
-                <a href="http://dialelo.github.io/application-architecture-with-react-rethinking-flux.html">Read More</a>
-                <hr class="uk-article-divider">
-        </article>
-
-
-        <article class="uk-article" itemtype="http://schema.org/BlogPosting" itemscope="itemscope" itemprop="blogPost">
-                <a href="http://dialelo.github.io/introduction-to-communicating-sequential-processes-in-javascript.html" class="uk-article-title uk-link-muted" itemprop="name">Introduction to Communicating Sequential Processes in JavaScript</a>
-                <p class="uk-article-meta"><time datetime="2015-04-02" itemprop="datePublished">Thu 02 April 2015</time> • <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
-</p>
-                <p class="uk-article-lead" itemprop="description">The JavaScript programming language features a rich set of techniques for dealing with asynchronous computation. Raw Continuation Passing Style (CPS) with callbacks, promises and Functional Reactive Programming are commonplace in today's JS. EcmaScript 7 will bring syntantic sugar on top of promises with async and await and you can ...</p>
-                <p>The JavaScript programming language features a rich set of techniques for dealing with asynchronous computation. Raw Continuation Passing Style (CPS) with callbacks, promises and Functional Reactive Programming are commonplace in today's JS. EcmaScript 7 will bring syntantic sugar on top of promises with async and await and you can use that today with Babel. However, the Go and Clojure(Script) programming languages have popularized modern incarnations of Tony Hoare's Communicating Sequential Processes (CSP), which is...</p>
-                <a href="http://dialelo.github.io/introduction-to-communicating-sequential-processes-in-javascript.html">Read More</a>
-                <hr class="uk-article-divider">
-        </article>
+        <hr class="uk-article-divider">
+    </article>
 
 
 </div>
