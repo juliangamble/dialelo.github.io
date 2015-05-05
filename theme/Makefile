@@ -6,6 +6,6 @@ sass:
 	    out="$(CSSDIR)/$${i%.*}.css"; \
 	    sassc "$(SCSSDIR)/$$i" "$$out"; \
 	    sed -i '$$d' "$$out"; \
-	    rm "$$out.map"; \
+	    rm -f "$$out.map"; \
 	 done
 	@echo 'SCSS files compiled'
