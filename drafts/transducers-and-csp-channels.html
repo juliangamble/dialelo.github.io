@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html lang="en" class="no-js lt-ie9 lt-ie8 lt-ie7" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <![endif]-->
+<!--[if IE 7]>         <html lang="en" class="no-js lt-ie9 lt-ie8" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <![endif]-->
+<!--[if IE 8]>         <html lang="en" class="no-js lt-ie9" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en" class="no-js" prefix="og: http://ogp.me/ns#" itemscope itemtype="http://schema.org/BlogPosting"> <!--<![endif]-->
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Transducers and CSP channels</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="In the last post I wrote about CSP channels and buffers, where we learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a transducer but we didn't go into detail about what a transducer is or what is used for. This ...">
+<link rel="shortcut icon" href="http://dialelo.github.io/favicon.ico" type="image/png">
+<meta name="author" content="Alejandro Gómez">
+<meta name="copyright" content="Alejandro Gómez">
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@dialelo" />
+<meta property="og:site_name" content="dialelo" />
+
+<meta property="og:title" content="Transducers and csp channels" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://dialelo.github.io/drafts/transducers-and-csp-channels.html" />
+<meta name="twitter:title" content="Transducers and csp channels" />
+<meta name="twitter:url" content="http://dialelo.github.io/drafts/transducers-and-csp-channels.html" />
+<meta itemprop="url" content="http://dialelo.github.io/drafts/transducers-and-csp-channels.html" />
+<meta property="og:description" content="In the last post I wrote about CSP channels and buffers, where we learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a transducer but we didn&#39;t go into detail about what a transducer is or what is used for. This ..." />
+<meta name="twitter:description" content="In the last post I wrote about CSP channels and buffers, where we learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a transducer but we didn&#39;t go into detail about what a transducer is or what is used for. This ..." />
+<meta property="og:article:published_time" content="2015-05-05" />
+<meta property="og:article:author" content="Alejandro Gómez" >
+
+<link href="http://dialelo.github.io/feeds/atom.xml" type="application/atom+xml" rel="alternate" title="dialelo ATOM Feed"/>
+<link href='//fonts.googleapis.com/css?family=Open+Sans:800italic' rel='stylesheet' type='text/css'>
+<link href='//fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/css/uikit.min.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/css/components/search.min.css">
+<link rel="stylesheet" href="/theme/css/tipuesearch.css">
+<link rel="stylesheet" href="/theme/css/solarized.css">
+<link rel="stylesheet" href="/theme/css/main.css">
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+</head>
+<body>
+<!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+<header class=" mg-header uk-navbar uk-navbar-attached">
+
+    <div class="uk-container uk-container-center">
+        <div class="uk-grid" data-uk-grid-margin>
+
+            <a class="mg-brand uk-navbar-brand uk-hidden-small" href="http://dialelo.github.io">dialelo</a>
+            <div class="mg-tagline uk-navbar-content uk-hidden-small"></div>
+            <a class="uk-navbar-toggle uk-visible-small" href="#mg-offcanvas" data-uk-offcanvas></a>
+            <a class="mg-brand uk-navbar-brand uk-navbar-center uk-visible-small" href="http://dialelo.github.io">dialelo</a>
+
+        </div>
+    </div>
+</header>
+
+<main class="mg-main">
+
+<div class="uk-container uk-container-center">
+
+    <div class="uk-grid" data-uk-grid-margin>
+
+<div class="mg-container-social uk-width-medium-1-10 uk-hidden-small">
+
+    <div class="uk-panel" id="mg-panel-social">
+        <ul class="uk-nav uk-nav-side">
+            <li>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button"><i class="uk-icon-facebook-square"></i> Share</a>
+            </li>
+            <li>
+            <a href="https://twitter.com/intent/tweet?text=Transducers%20and%20CSP%20channels&url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
+            </li>
+            <li>
+            <a href="https://plus.google.com/share?url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button"><i class="uk-icon-google-plus-square"></i> Share</a>
+            </li>
+        </ul>
+    </div>
+
+</div>
+
+<div class="uk-width-medium-7-10">
+
+    <article class="uk-article">
+        <h1 class="uk-heading-large uk-article-title" itemprop="name">Transducers and CSP channels</h1>
+        <p class="uk-article-meta"><time datetime="2015-05-05" itemprop="datePublished">Tue 05 May 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
+
+        <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button uk-visible-small"><i class="uk-icon-facebook-square"></i> Share</a>
+        <a href="https://twitter.com/intent/tweet?text=Transducers%20and%20CSP%20channels&url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button uk-visible-small" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
+        <a href="https://plus.google.com/share?url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button uk-visible-small"><i class="uk-icon-google-plus-square"></i> Share</a>
+
+        <section itemprop="articleBody"><p>In the last post I wrote about <a href="/understanding-csp-channels-and-buffers.html">CSP channels and buffers</a>, where we
+learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a
+transducer but we didn't go into detail about what a transducer is or what is used for. This post intends to
+explain what a transducer is and convey their value proposition, and show how we can use them in combination with
+CSP channels.</p>
+<h2>Transducers</h2>
+<p>Transducers were recently conceived in the Clojure community but several JavaScript implementations exist already.
+The core idea of transducers is to make transformations of processes that carry inputs from a source to a destination
+independent of context. This may not make a lot of sense now so let's start from first principles, hopefully at the
+end of the article that statement will make sense.</p>
+<h3>Reducing functions</h3>
+<p>If you are a JavaScript programmer you may have used <code>Array#reduce</code>. A reducing function is nothing more that a
+function that is suitable to give to a reduction process. As you probably know a function given to <code>reduce</code> takes two
+arguments: an accumulator and an input, and the return value of such function becomes the accumulator for the next input.
+The reduction process for arrays iterates over every element in the array and returns the last accumulator.</p>
+<p>Let's run a reduction to illustrate the reduction process:</p>
+<div class="highlight"><pre><span class="kd">function</span> <span class="nx">reducingAdd</span><span class="p">(</span><span class="nx">accumulator</span><span class="p">,</span> <span class="nx">input</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Accumulator:&quot;</span><span class="p">,</span> <span class="nx">accumulator</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Input:&quot;</span><span class="p">,</span> <span class="nx">input</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">accumulator</span> <span class="o">+</span> <span class="nx">input</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">].</span><span class="nx">reduce</span><span class="p">(</span><span class="nx">reducingAdd</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="c1">//=&gt; &quot;Accumulator: 0&quot;</span>
+<span class="c1">//=&gt; &quot;Input: 1&quot;</span>
+<span class="c1">//=&gt; &quot;Accumulator: 1&quot;</span>
+<span class="c1">//=&gt; &quot;Input: 2&quot;</span>
+<span class="c1">//=&gt; &quot;Accumulator: 3&quot;</span>
+<span class="c1">//=&gt; &quot;Input: 3&quot;</span>
+<span class="c1">//=&gt; 6</span>
+</pre></div>
+
+
+<p>The <code>Array#reduce</code> function is what's known as a left fold, which can be converted easily to a iterative process (i.e. a for loop).
+There is another flavour of folding, right fold, whose reducing functions take the parameters in reverse order. I may write about
+folds in an upcoming post but knowing the left fold reducing function shape is enough to understand transducers.</p>
+<h3>Liberating transformations from collections</h3>
+<p>It turns out that many collection transforming functions such as <code>Array#map</code> and <code>Array#filter</code> can be defined in terms of reduce.
+In the case of the aforementioned functions, they work on an array returning another, let's explore a possible implementation of
+them in terms of <code>reduce</code>.</p>
+<div class="highlight"><pre><span class="kd">function</span> <span class="nx">map</span><span class="p">(</span><span class="nx">f</span><span class="p">,</span> <span class="nx">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">arr</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">accumulator</span><span class="p">,</span> <span class="nx">input</span><span class="p">){</span>
+        <span class="nx">accumulator</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">f</span><span class="p">(</span><span class="nx">input</span><span class="p">));</span>
+        <span class="k">return</span> <span class="nx">accumulator</span><span class="p">;</span>
+    <span class="p">},</span> <span class="p">[]);</span>
+<span class="p">}</span>
+
+<span class="nx">map</span><span class="p">((</span><span class="nx">x</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]);</span>
+<span class="c1">//=&gt; [2, 3, 4]</span>
+
+<span class="kd">function</span> <span class="nx">filter</span><span class="p">(</span><span class="nx">pred</span><span class="p">,</span> <span class="nx">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">arr</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">accumulator</span><span class="p">,</span> <span class="nx">input</span><span class="p">){</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">pred</span><span class="p">(</span><span class="nx">input</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">accumulator</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">input</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">accumulator</span><span class="p">;</span>
+    <span class="p">},</span> <span class="p">[]);</span>
+<span class="p">}</span>
+
+<span class="nx">filter</span><span class="p">((</span><span class="nx">x</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">x</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]);</span>
+<span class="c1">//=&gt; [1, 2]</span>
+</pre></div>
+
+
+<p>Look at how both operations defined in terms of reduce share the same structure, the essence of what they do is conflated
+with the logic to make another array from the array reduction. It looks like there is a pattern there, let's try to make it explicit:</p>
+<div class="highlight"><pre><span class="kd">function</span> <span class="nx">arrayReduce</span><span class="p">(</span><span class="nx">accumulator</span><span class="p">,</span> <span class="nx">input</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">accumulator</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">input</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">accumulator</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">].</span><span class="nx">reduce</span><span class="p">(</span><span class="nx">arrayReduce</span><span class="p">,</span> <span class="p">[]);</span>
+<span class="c1">//=&gt; [1, 2, 3]</span>
+</pre></div>
+
+
+<p>As we can see, obtaining an array by reducing another can be achieved combining <code>arrayReduce</code> and seeding the reduce with an initial
+empty array accumulator. Note that <code>arrayReduce</code> is a reducing function, so now can express the above <code>map</code> and <code>filter</code> functions as
+the transformation of a reducing function:</p>
+<div class="highlight"><pre><span class="kd">function</span> <span class="nx">map</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="kd">function</span><span class="p">(</span><span class="nx">rfn</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kd">function</span><span class="p">(</span><span class="nx">accumulator</span><span class="p">,</span> <span class="nx">input</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">rfn</span><span class="p">(</span><span class="nx">accumulator</span><span class="p">,</span> <span class="nx">f</span><span class="p">(</span><span class="nx">input</span><span class="p">));</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">var</span> <span class="nx">mapInc</span> <span class="o">=</span> <span class="nx">map</span><span class="p">((</span><span class="nx">x</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+
+<span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">].</span><span class="nx">reduce</span><span class="p">(</span><span class="nx">mapInc</span><span class="p">(</span><span class="nx">arrayReduce</span><span class="p">),</span> <span class="p">[]);</span>
+</pre></div>
+
+
+<p>The great thing about our new version of <code>map</code> is that it modifies another reducing function (<code>rfn</code>) instead of being bound to lists.
+Imagine that you had another data structure which could be constructed with a reducing function and a seed value, <code>mapInc</code> would still
+be able to work on it. Suddenly, we get a <code>map</code> operation that is <em>context-independent</em>.</p>
+<p>The function returned by <code>map</code> is a transducer; a function that takes a reducing function and returns a new, modified reducing function.</p>
+<h3>Seeds</h3>
+<p>As we saw with the <code>arrayReduce</code> and <code>[]</code> combination, reducing often requires a initial value or a seed. Transducers incorporate the notion
+of an initial value so they're a bit more complicated than simply transforming reducing functions.</p>
+<p>There is an official <a href="https://github.com/cognitect-labs/transducers-js/issues/20">spec</a> for transducers which defines
+the operations they support and make interoperability between libraries possible. Our <code>arrayReduce</code> function from before is the reducing function
+transformer, called "step" in transducer parlance. It's the core of what our transducer does.</p>
+<p>Let's see how we could express our array reducer to conform to the official transducer protocol:</p>
+<div class="highlight"><pre><span class="kr">const</span> <span class="nx">arrayReducer</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;@@transducer/init&quot;</span><span class="o">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">[],</span>
+    <span class="s2">&quot;@@transducer/result&quot;</span><span class="o">:</span> <span class="cm">/* ... */</span><span class="p">,</span>
+    <span class="s2">&quot;@@transducer/step&quot;</span><span class="o">:</span> <span class="p">(</span><span class="nx">acc</span><span class="p">,</span> <span class="nx">input</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">acc</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">input</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">input</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>We'll discuss the "result" operation of transducers in the following section.</p>
+<h3>Stateful transducers</h3>
+<p>Mapping and filtering are great, but we may want to implement transformations that involve state. For example, a common transformation would be to
+partition inputs in chunks or transform a process to take at most <code>n</code> input values and bail out. Expressing this kind of transformations are achieved using:</p>
+<ul>
+<li>the notion of a "reduced" value, a value for which the process has terminated;</li>
+<li>transducer's "result" function, which will be called when a process has terminated, allowing a stateful transducer to cleanup and flush any incomplete values.</li>
+</ul>
+<h4>Reduced</h4>
+<p>If we want to make a <code>take</code> transducer which, given a <code>n</code> number of inputs will only allow up to <code>n</code> input values to flow through the process, we must mark the
+accumulator as "reduced" once we have ingested <code>n</code> inputs:</p>
+<p><code>javascript
+function take(n) {
+    return function(rfn) {
+        let i = 0;
+        return {
+            "@@transducer/step": (acc, input) =&gt; {
+                if (i &lt; n) {
+                    i++;
+                    return rfn(acc, input);
+                } else {
+                    // i === n
+                    return reduced(acc);
+                }
+            }
+        };
+    }
+}</code></p>
+<h4>Result</h4>
+<p>For the <code>partition</code> transducer, we will be chunking elements into <code>n</code>-arrays but if we</p>
+<h2>Channels and Transducers</h2>
+<h2>Further information</h2>
+<ul>
+<li>The post that introduced transducers: <a href="http://blog.cognitect.com/blog/2014/8/6/transducers-are-coming">Transducers are coming</a></li>
+<li>Rich Hickey's talks about transducers</li>
+</ul></section>
+        <hr class="uk-article-divider">
+    </article>
+
+
+</div>
+
+        <div class="uk-width-medium-1-5 uk-hidden-small">
+
+            <div class="uk-panel uk-panel-box">
+                <form class="uk-search" action="search.html" data-uk-search>
+                    <input class="uk-search-field tipue_search" type="search" name="q" id="tipue_search_input" autocomplete="off" placeholder="Search...">
+                </form>
+            </div>
+
+            <div class="uk-panel uk-panel-box">
+                <ul class="uk-nav uk-nav-side">
+                    <li class="uk-nav-header">Categories</li>
+                    <li class="uk-active"><a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></li>
+
+                    <li class="uk-nav-divider"></li>
+                    <li ><a href="http://dialelo.github.io/archives.html">Archives</a></li>
+                </ul>
+            </div>
+
+            <div class="uk-panel uk-panel-box">
+                <h3 class="uk-panel-title">Receive Updates</h3>
+                <a rel="alternate" type="application/atom+xml" href="http://dialelo.github.io/feeds/atom.xml" class="mg-feed"><i class="uk-icon-rss uk-icon-medium"></i> ATOM</a>
+            </div>
+
+            <div class="uk-panel uk-panel-box">
+                <h3 class="uk-panel-title">Contacts</h3>
+                <a class="mg-icon-link" href="https://github.com/dialelo">
+                    <i class="uk-icon-github uk-icon-medium"></i>
+                </a>
+                <a class="mg-icon-link" href="https://twitter.com/dialelo">
+                    <i class="uk-icon-twitter uk-icon-medium"></i>
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</main>
+
+<footer class="mg-footer">
+    <div class="uk-container uk-container-center uk-text-center">
+
+        <div class="mg-icons-small uk-subnav uk-visible-small">
+            <li><a rel="alternate" type="application/atom+xml" href="http://dialelo.github.io/feeds/atom.xml" class="uk-icon-button uk-icon-rss"></a></li>
+            <li>
+                <a href="https://github.com/dialelo" class="uk-icon-button uk-icon-github"></a>
+            </li>
+            <li>
+                <a href="https://twitter.com/dialelo" class="uk-icon-button uk-icon-twitter"></a>
+            </li>
+        </div>
+
+        <div class="mg-author uk-panel">
+            <p>
+(ɔ) 2015 Alejandro Gómez. All the content licensed under a
+<a href="http://creativecommons.org/licenses/by/4.0/">
+Creative Commons Attribution</a> license.<br>
+Code snippets in the pages are released under
+<a href="http://opensource.org/licenses/BSD-2-clause" target="_blank">
+ The simplified BSD License</a>, unless otherwise specified.
+</p>
+
+            <p>Powered by <a href="http://blog.getpelican.com">Pelican</a>.<br class="uk-visible-small"> Theme based on <a href="https://github.com/lucachr/pelican-mg">mg</a> by <a href="https://github.com/lucachr">Luca Chiricozzi</a>. Favicon by <a href="http://www.defaulticon.com" >Default Icon</a>.</p>
+        </div>
+    </div>
+</footer>
+
+<div id="mg-offcanvas" class="uk-offcanvas">
+    <div class="uk-offcanvas-bar">
+
+        <form class="uk-search" action="search.html" data-uk-search>
+            <input class="uk-search-field" type="search" name="q" id="tipue_search_input" autocomplete="off" placeholder="Search...">
+        </form>
+
+        <ul class="uk-nav uk-nav-offcanvas" data-uk-nav>
+            <li class="uk-nav-header">Categories</li>
+            <li class="uk-active"><a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></li>
+
+            <li class="uk-nav-divider"></li>
+            <li><a href="http://dialelo.github.io/">Archives</a></li>
+        </ul>
+    </div>
+</div>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="js/vendor/jquery-1.10.2.min.js"><\/script>')</script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/js/uikit.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/uikit/2.15.0/js/components/search.min.js"></script>
+<script src="/theme/js/jquery.sticky-kit.js"></script>
+<script src="/theme/js/tipuesearch_set.js"></script>
+<script src="/theme/js/tipuesearch.js"></script>
+<script src="/theme/js/plugins.js"></script>
+<script src="/theme/js/main.js"></script>
+
+</body>
+</html>
