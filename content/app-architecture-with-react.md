@@ -389,7 +389,7 @@ class Effects {
             logIn(publication, state),
             logOut(publication, state)
         ];
-    },
+    }
     stop(){
         this.chans.map((ch) => ch.close());
     }
