@@ -411,7 +411,7 @@ import {CursorPropsMixin} from "react-kurtsore";
 
 import {state} from "./state";
 import {Albums, Playlists} from "./views";
-import pubsub "./pubsub";
+import pubsub from "./pubsub";
 import effects from "./effects";
 
 const App = React.createClass({
