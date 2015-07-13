@@ -6,9 +6,9 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Transducers and CSP channels</title>
+<title>Transducers Unraveled</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="In the last post I wrote about CSP channels and buffers, where we learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a transducer but we didn't go into detail about what a transducer is or what is used for. This ...">
+<meta name="description" content="Transducers Transducers were recently conceived in the Clojure community but several JavaScript implementations exist already. The core idea of transducers is to make transformations of processes that carry inputs from a source to a destination independent of context. This may not make a lot of sense now so let's ...">
 <link rel="shortcut icon" href="http://dialelo.github.io/favicon.ico" type="image/png">
 <meta name="author" content="Alejandro Gómez">
 <meta name="copyright" content="Alejandro Gómez">
@@ -16,14 +16,14 @@
 <meta name="twitter:site" content="@dialelo" />
 <meta property="og:site_name" content="dialelo" />
 
-<meta property="og:title" content="Transducers and csp channels" />
+<meta property="og:title" content="Transducers unraveled" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="http://dialelo.github.io/drafts/transducers-and-csp-channels.html" />
-<meta name="twitter:title" content="Transducers and csp channels" />
-<meta name="twitter:url" content="http://dialelo.github.io/drafts/transducers-and-csp-channels.html" />
-<meta itemprop="url" content="http://dialelo.github.io/drafts/transducers-and-csp-channels.html" />
-<meta property="og:description" content="In the last post I wrote about CSP channels and buffers, where we learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a transducer but we didn&#39;t go into detail about what a transducer is or what is used for. This ..." />
-<meta name="twitter:description" content="In the last post I wrote about CSP channels and buffers, where we learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a transducer but we didn&#39;t go into detail about what a transducer is or what is used for. This ..." />
+<meta property="og:url" content="http://dialelo.github.io/drafts/transducers-unraveled.html" />
+<meta name="twitter:title" content="Transducers unraveled" />
+<meta name="twitter:url" content="http://dialelo.github.io/drafts/transducers-unraveled.html" />
+<meta itemprop="url" content="http://dialelo.github.io/drafts/transducers-unraveled.html" />
+<meta property="og:description" content="Transducers Transducers were recently conceived in the Clojure community but several JavaScript implementations exist already. The core idea of transducers is to make transformations of processes that carry inputs from a source to a destination independent of context. This may not make a lot of sense now so let&#39;s ..." />
+<meta name="twitter:description" content="Transducers Transducers were recently conceived in the Clojure community but several JavaScript implementations exist already. The core idea of transducers is to make transformations of processes that carry inputs from a source to a destination independent of context. This may not make a lot of sense now so let&#39;s ..." />
 <meta property="og:article:published_time" content="2015-05-20" />
 <meta property="og:article:author" content="Alejandro Gómez" >
 
@@ -68,13 +68,13 @@
     <div class="uk-panel" id="mg-panel-social">
         <ul class="uk-nav uk-nav-side">
             <li>
-            <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button"><i class="uk-icon-facebook-square"></i> Share</a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/drafts/transducers-unraveled.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button"><i class="uk-icon-facebook-square"></i> Share</a>
             </li>
             <li>
-            <a href="https://twitter.com/intent/tweet?text=Transducers%20and%20CSP%20channels&url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
+            <a href="https://twitter.com/intent/tweet?text=Transducers%20Unraveled&url=http://dialelo.github.io/drafts/transducers-unraveled.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
             </li>
             <li>
-            <a href="https://plus.google.com/share?url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button"><i class="uk-icon-google-plus-square"></i> Share</a>
+            <a href="https://plus.google.com/share?url=http://dialelo.github.io/drafts/transducers-unraveled.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button"><i class="uk-icon-google-plus-square"></i> Share</a>
             </li>
         </ul>
     </div>
@@ -84,19 +84,14 @@
 <div class="uk-width-medium-7-10">
 
     <article class="uk-article">
-        <h1 class="uk-heading-large uk-article-title" itemprop="name">Transducers and CSP channels</h1>
+        <h1 class="uk-heading-large uk-article-title" itemprop="name">Transducers Unraveled</h1>
         <p class="uk-article-meta"><time datetime="2015-05-20" itemprop="datePublished">Wed 20 May 2015</time> in <a href="http://dialelo.github.io/category/javascript.html">JavaScript</a></p>
 
-        <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button uk-visible-small"><i class="uk-icon-facebook-square"></i> Share</a>
-        <a href="https://twitter.com/intent/tweet?text=Transducers%20and%20CSP%20channels&url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button uk-visible-small" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
-        <a href="https://plus.google.com/share?url=http://dialelo.github.io/drafts/transducers-and-csp-channels.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button uk-visible-small"><i class="uk-icon-google-plus-square"></i> Share</a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=http://dialelo.github.io/drafts/transducers-unraveled.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=300,width=600');return false;" taget="_blank" class="uk-button uk-visible-small"><i class="uk-icon-facebook-square"></i> Share</a>
+        <a href="https://twitter.com/intent/tweet?text=Transducers%20Unraveled&url=http://dialelo.github.io/drafts/transducers-unraveled.html&via=dialelo" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" class="uk-button uk-visible-small" target="_blank"><i class="uk-icon-twitter"></i> Tweet</a>
+        <a href="https://plus.google.com/share?url=http://dialelo.github.io/drafts/transducers-unraveled.html" onclick="javascript:window.open(this.href,'', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" target="_blank" class="uk-button uk-visible-small"><i class="uk-icon-google-plus-square"></i> Share</a>
 
-        <section itemprop="articleBody"><p>In the last post I wrote about <a href="/understanding-csp-channels-and-buffers.html">CSP channels and buffers</a>, where we
-learned about the inner workings of channels and how they use buffers. I mentioned that channels encapsulate a
-transducer but we didn't go into detail about what a transducer is or what is used for. This post intends to
-explain what a transducer is useful for and convey their value proposition, and show how we can use them in combination
-with CSP channels.</p>
-<h2>Transducers</h2>
+        <section itemprop="articleBody"><h2>Transducers</h2>
 <p>Transducers were recently conceived in the Clojure community but several JavaScript implementations exist already.
 The core idea of transducers is to make transformations of processes that carry inputs from a source to a destination
 independent of context. This may not make a lot of sense now so let's start from first principles, hopefully at the
