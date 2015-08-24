@@ -192,6 +192,32 @@ export const Albums = React.createClass({
         );
     }
 });
+
+export const Playlist = React.createClass({
+    mixins: [ CursorPropsMixin ],
+
+    render(){
+        let playlist = this.props.playlist.deref();
+        return <li>{playlist.get('name')}</li>;
+    }
+});
+
+export const Playlists = React.createClass({
+    mixins: [ CursorPropsMixin ],
+
+    render(){
+        let albums = this.props.playlists.deref(),
+            cursors = playlists.map((a, idx) => this.props.playlists.derive(idx));
+
+        return (
+            <ul>
+                {cursors.map(
+                    (a, idx) => <Playlist key={idx} playlist={a} />
+                )}
+            </ul>
+        );
+    }
+});
 ```
 
 ## Actions
@@ -422,8 +448,8 @@ const App = React.createClass({
 
         return (
             <div>
-                <Albums state={state.derive('albums')} />
-                <Playlists state={state.derive('playlists')} />
+                <Albums albums={state.derive('albums')} />
+                <Playlists playlists={state.derive('playlists')} />
             </div>
         );
     }
